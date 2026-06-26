@@ -42,6 +42,12 @@ class RenderConfig:
     province_adcode: str = ""
     city_adcode: str = ""
 
+    # ── Basemap ───────────────────────────────────────────────────────────────
+    basemap: str = "esri_gray"   # key from BASEMAP_REGISTRY in cartopy_renderer
+
+    # ── Zoom connection lines ─────────────────────────────────────────────────
+    show_zoom_lines: bool = False  # draw leader lines between panels
+
     # ── Custom SHP mode ───────────────────────────────────────────────────────
     custom_shp: Optional[Path] = None
     custom_name: Optional[str] = None

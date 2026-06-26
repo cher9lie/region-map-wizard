@@ -66,7 +66,36 @@ class InvalidSHPError(RMWError):
     code = "E021"
 
     def __init__(self, detail: str = ""):
-        super().__init__("上传的 SHP 文件无法读取或投影不明", detail)
+        super().__init__(f"SHP 文件无效: {detail}" if detail else "上传的 SHP 文件无法读取或投影不明", detail)
+
+
+class SHPMissingFilesError(InvalidSHPError):
+    """Required companion files (.shx / .dbf / .prj) are absent."""
+    code = "E022"
+
+    def __init__(self, missing: list[str]):
+        joined = "、".join(missing)
+        super(InvalidSHPError, self).__init__(f"SHP 缺少必要文件: {joined}", joined)
+
+
+class SHPGeometryTypeError(InvalidSHPError):
+    """SHP contains non-polygon geometry."""
+    code = "E023"
+
+    def __init__(self, found: str):
+        super(InvalidSHPError, self).__init__(
+            f"SHP 几何类型为 {found}，需要面要素（Polygon/MultiPolygon）", found
+        )
+
+
+class SHPCRSError(InvalidSHPError):
+    """SHP has no CRS or CRS conversion failed."""
+    code = "E024"
+
+    def __init__(self, detail: str = ""):
+        super(InvalidSHPError, self).__init__(
+            f"坐标系问题: {detail}" if detail else "SHP 文件坐标参考系无法识别", detail
+        )
 
 
 # ── I/O errors ─────────────────────────────────────────────────────────────────

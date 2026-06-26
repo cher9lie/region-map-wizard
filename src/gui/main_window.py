@@ -11,9 +11,9 @@ try:
         QLabel, QComboBox, QPushButton, QProgressBar,
         QTextEdit, QFileDialog, QGroupBox, QFormLayout,
         QLineEdit, QMessageBox, QApplication, QStatusBar,
-        QScrollArea, QSizePolicy, QFrame,
+        QScrollArea, QSizePolicy, QFrame, QCheckBox,
     )
-    from PyQt5.QtCore import Qt
+    from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
     from PyQt5.QtGui import QFont, QPixmap, QColor
     _QT_AVAILABLE = True
 except ImportError:
@@ -100,10 +100,20 @@ if _QT_AVAILABLE:
             self._color_ramp_combo.addItems(["dem_hypsometric", "dem_green_brown"])
             data_form.addRow("色带:", self._color_ramp_combo)
 
+            self._basemap_combo = QComboBox()
+            from src.renderers.cartopy_renderer import BASEMAP_REGISTRY
+            for key, meta in BASEMAP_REGISTRY.items():
+                self._basemap_combo.addItem(meta["label_zh"], userData=key)
+            data_form.addRow("底图:", self._basemap_combo)
+
             self._lang_combo = QComboBox()
             self._lang_combo.addItem("中文", userData="zh")
             self._lang_combo.addItem("English", userData="en")
             data_form.addRow("语言:", self._lang_combo)
+
+            self._zoom_lines_chk = QCheckBox("显示区位连接线")
+            self._zoom_lines_chk.setChecked(False)
+            data_form.addRow("", self._zoom_lines_chk)
             left.addWidget(data_group)
 
             # Engine & output
@@ -182,7 +192,7 @@ if _QT_AVAILABLE:
             # Image preview area
             preview_frame = QFrame()
             preview_frame.setFrameShape(QFrame.StyledPanel)
-            preview_frame.setStyleSheet("background:#F0F0F0; border:1px solid #CCCCCC; border-radius:4px;")
+            preview_frame.setStyleSheet("border:1px solid #CCCCCC; border-radius:4px;")
             preview_layout = QVBoxLayout(preview_frame)
             preview_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -209,20 +219,56 @@ if _QT_AVAILABLE:
                 self._province_combo.addItem(p["name"], userData=p["adcode"])
 
         def _populate_engines(self) -> None:
-            from src.renderers.qgis_renderer import QGISRenderer
-            from src.renderers.cartopy_renderer import CartopyRenderer
-            from src.renderers.arcgis_renderer import ArcGISRenderer
-            for label, key, cls in [
-                ("QGIS", "qgis", QGISRenderer),
-                ("Cartopy (纯Python)", "cartopy", CartopyRenderer),
-                ("ArcGIS Pro", "arcgis", ArcGISRenderer),
-            ]:
-                avail, _ = cls().check_available()
-                display = label if avail else f"{label} (不可用)"
-                self._engine_combo.addItem(display, userData=key)
-                if not avail:
-                    idx = self._engine_combo.count() - 1
-                    self._engine_combo.model().item(idx).setForeground(QColor("#999999"))
+            """Add placeholder items immediately, then probe availability in background."""
+            _ENGINES = [
+                ("QGIS",           "qgis",    "src.renderers.qgis_renderer",    "QGISRenderer"),
+                ("Cartopy (纯Python)", "cartopy", "src.renderers.cartopy_renderer", "CartopyRenderer"),
+                ("ArcGIS Pro",     "arcgis",  "src.renderers.arcgis_renderer",  "ArcGISRenderer"),
+            ]
+            for label, key, _mod, _cls in _ENGINES:
+                self._engine_combo.addItem(f"{label} (检测中…)", userData=key)
+
+            # Default to Cartopy (index 1) while probing
+            self._engine_combo.setCurrentIndex(1)
+
+            # Probe each engine in a daemon thread; update the combo on completion
+            def _probe():
+                results = []
+                for label, key, mod_name, cls_name in _ENGINES:
+                    try:
+                        import importlib
+                        mod = importlib.import_module(mod_name)
+                        cls = getattr(mod, cls_name)
+                        avail, ver = cls().check_available()
+                    except Exception as exc:
+                        avail, ver = False, str(exc)
+                    results.append((label, key, avail, ver))
+                return results
+
+            class _ProbeThread(QThread):
+                done = pyqtSignal(list)
+                def run(self):
+                    self.done.emit(_probe())
+
+            self._probe_thread = _ProbeThread()
+
+            def _on_done(results):
+                self._engine_combo.clear()
+                preferred_idx = 1  # default to Cartopy
+                for i, (label, key, avail, ver) in enumerate(results):
+                    display = label if avail else f"{label} (不可用)"
+                    self._engine_combo.addItem(display, userData=key)
+                    if not avail:
+                        self._engine_combo.model().item(i).setForeground(QColor("#999999"))
+                        self.append_log(f"[引擎检测] {label} 不可用: {ver}")
+                    else:
+                        self.append_log(f"[引擎检测] {label} 可用: {ver}")
+                    if key == "cartopy" and avail:
+                        preferred_idx = i
+                self._engine_combo.setCurrentIndex(preferred_idx)
+
+            self._probe_thread.done.connect(_on_done)
+            self._probe_thread.start()
 
         def _load_saved_state(self) -> None:
             last_prov = self._cfg.get("last_province", "110000")
@@ -287,6 +333,7 @@ if _QT_AVAILABLE:
             dpi = int(self._dpi_combo.currentText())
             engine_key = self._engine_combo.currentData() or "cartopy"
             language = self._lang_combo.currentData() or "zh"
+            basemap = self._basemap_combo.currentData() or "esri_gray"
 
             data_map = {
                 "DEM 高程": "dem", "山体阴影": "hillshade",
@@ -313,6 +360,8 @@ if _QT_AVAILABLE:
                 output_format=fmt,
                 dpi=dpi,
                 language=language,
+                basemap=basemap,
+                show_zoom_lines=self._zoom_lines_chk.isChecked(),
                 custom_shp=self._custom_shp,
                 custom_name=self._custom_name or None,
             )

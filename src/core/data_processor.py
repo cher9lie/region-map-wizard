@@ -6,11 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import rasterio
-from rasterio.mask import mask as rio_mask
-from rasterio.merge import merge as rio_merge
-from rasterio.warp import transform_bounds
-
 import geopandas as gpd
 
 
@@ -20,6 +15,9 @@ class DataProcessor:
     @staticmethod
     def merge_tiles(tile_paths: list[Path], output_path: Path) -> Path:
         """Merge multiple GeoTIFF tiles into a single file using rasterio."""
+        import rasterio
+        from rasterio.merge import merge as rio_merge
+
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -47,11 +45,13 @@ class DataProcessor:
         output_path: Path,
     ) -> Path:
         """Clip a raster to the union of geometries in a GeoDataFrame."""
+        import rasterio
+        from rasterio.mask import mask as rio_mask
+
         raster_path = Path(raster_path)
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Reproject boundary to raster CRS if needed
         with rasterio.open(raster_path) as src:
             raster_crs = src.crs
             if boundary_gdf.crs and boundary_gdf.crs != raster_crs:
@@ -71,15 +71,9 @@ class DataProcessor:
 
     @staticmethod
     def apply_color_ramp(raster_path: Path, color_ramp: dict) -> np.ndarray:
-        """Map a single-band DEM raster to an RGBA array using a colour ramp.
+        """Map a single-band DEM raster to an RGBA array using a colour ramp."""
+        import rasterio
 
-        Args:
-            raster_path: Path to single-band GeoTIFF.
-            color_ramp: Dict with key 'stops', each stop having 'value' and 'color'.
-
-        Returns:
-            RGBA uint8 array of shape (height, width, 4).
-        """
         stops = sorted(color_ramp["stops"], key=lambda s: s["value"])
         stop_values = np.array([s["value"] for s in stops], dtype=float)
         stop_colors = np.array(
@@ -102,7 +96,7 @@ class DataProcessor:
             interp = np.interp(data, stop_values, stop_colors[:, channel].astype(float))
             rgba[:, :, channel] = interp.astype(np.uint8)
 
-        rgba[mask, 3] = 0  # fully transparent for nodata
+        rgba[mask, 3] = 0
         return rgba
 
     @staticmethod
@@ -113,6 +107,8 @@ class DataProcessor:
         max_val: float = 3000,
     ) -> Path:
         """Stretch Sentinel-2 reflectance values to 0-255 uint8."""
+        import rasterio
+
         raster_path = Path(raster_path)
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -131,6 +127,9 @@ class DataProcessor:
     @staticmethod
     def get_raster_extent(raster_path: Path) -> tuple[float, float, float, float]:
         """Return (xmin, ymin, xmax, ymax) in EPSG:4326."""
+        import rasterio
+        from rasterio.warp import transform_bounds
+
         with rasterio.open(raster_path) as src:
             if src.crs and src.crs.to_epsg() != 4326:
                 bounds = transform_bounds(src.crs, "EPSG:4326", *src.bounds)
@@ -142,6 +141,8 @@ class DataProcessor:
     @staticmethod
     def get_raster_stats(raster_path: Path) -> dict[str, Any]:
         """Return basic stats for a raster file."""
+        import rasterio
+
         with rasterio.open(raster_path) as src:
             data = src.read(1)
             nodata = src.nodata

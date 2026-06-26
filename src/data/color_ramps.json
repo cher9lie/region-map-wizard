@@ -1,0 +1,37 @@
+{
+  "dem_hypsometric": {
+    "description": "DEM 经典分层设色",
+    "unit": "meters",
+    "stops": [
+      {"value": -200, "color": "#2b83ba", "label": "≤0"},
+      {"value": 0,    "color": "#abdda4", "label": "0"},
+      {"value": 200,  "color": "#ffffbf", "label": "200"},
+      {"value": 500,  "color": "#fdae61", "label": "500"},
+      {"value": 1000, "color": "#d7191c", "label": "1000"},
+      {"value": 2000, "color": "#a6611a", "label": "2000"},
+      {"value": 3500, "color": "#dfc27d", "label": "3500"},
+      {"value": 5000, "color": "#f5f5f5", "label": "5000"},
+      {"value": 8848, "color": "#ffffff", "label": ">5000"}
+    ]
+  },
+  "dem_green_brown": {
+    "description": "绿色→棕色 地形设色",
+    "unit": "meters",
+    "stops": [
+      {"value": 0,    "color": "#1a9641", "label": "0"},
+      {"value": 300,  "color": "#a6d96a", "label": "300"},
+      {"value": 800,  "color": "#ffffbf", "label": "800"},
+      {"value": 1500, "color": "#fdae61", "label": "1500"},
+      {"value": 3000, "color": "#d73027", "label": "3000"},
+      {"value": 5000, "color": "#ffffff", "label": "5000"}
+    ]
+  },
+  "hillshade_grey": {
+    "description": "山体阴影灰度",
+    "unit": "none",
+    "stops": [
+      {"value": 0,   "color": "#000000", "label": "0"},
+      {"value": 255, "color": "#ffffff", "label": "255"}
+    ]
+  }
+}

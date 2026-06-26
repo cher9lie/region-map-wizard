@@ -1,0 +1,82 @@
+/* Region Map Wizard — QSS theme */
+
+QMainWindow, QDialog {
+    background-color: #F5F5F5;
+    font-family: "Microsoft YaHei", "SimHei", Arial, sans-serif;
+    font-size: 13px;
+}
+
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #CCCCCC;
+    border-radius: 6px;
+    margin-top: 10px;
+    padding-top: 4px;
+    background: #FFFFFF;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 6px;
+    color: #2E7D32;
+}
+
+QPushButton {
+    background-color: #EEEEEE;
+    border: 1px solid #BBBBBB;
+    border-radius: 4px;
+    padding: 4px 12px;
+    min-width: 60px;
+}
+QPushButton:hover   { background-color: #E0E0E0; }
+QPushButton:pressed { background-color: #D0D0D0; }
+QPushButton:disabled{ color: #AAAAAA; background-color: #F0F0F0; }
+
+QPushButton#runButton {
+    background-color: #2E7D32;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    border-radius: 5px;
+}
+QPushButton#runButton:hover   { background-color: #388E3C; }
+QPushButton#runButton:pressed { background-color: #1B5E20; }
+
+QProgressBar {
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    text-align: center;
+    height: 18px;
+}
+QProgressBar::chunk {
+    background-color: #2E7D32;
+    border-radius: 3px;
+}
+
+QComboBox {
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    padding: 2px 6px;
+    background: #FFFFFF;
+}
+QComboBox::drop-down { border: none; }
+QComboBox QAbstractItemView { border: 1px solid #CCCCCC; }
+
+QLineEdit {
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    padding: 2px 6px;
+    background: #FFFFFF;
+}
+
+QTextEdit {
+    border: 1px solid #CCCCCC;
+    border-radius: 4px;
+    background: #FAFAFA;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12px;
+}
+
+QLabel { color: #333333; }
+
+QStatusBar { color: #666666; font-size: 11px; }

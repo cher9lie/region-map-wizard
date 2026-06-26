@@ -81,15 +81,8 @@ class MapWizardPipeline:
         _p(5, "获取行政区边界...")
         adcode = self._resolve_adcode(config)
         _log(f"行政区 adcode: {adcode}")
-
-        # Write boundary GeoJSONs for the renderer
-        country_path, province_path, city_path = self._export_boundaries(
-            adcode, config
-        )
-        config = _replace(config,
-                          country_boundary=country_path,
-                          province_boundary=province_path,
-                          city_boundary=city_path)
+        # Renderer reads directly from the GPKG; no GeoJSON export needed.
+        # province_adcode / city_adcode on the config drive per-layer filtering.
         _log("边界数据准备完成")
 
         # Step 3 — Raster data
@@ -110,11 +103,10 @@ class MapWizardPipeline:
                 cache_path = self.cache_mgr.get_cache_path(
                     adcode, config.data_type, year=year
                 )
-                import geopandas as gpd
-                city_gdf = gpd.read_file(city_path)
                 from shapely.geometry import mapping
                 try:
                     import ee
+                    city_gdf = self.boundary_mgr.get_boundary(adcode, "city")
                     geom = ee.Geometry(mapping(city_gdf.unary_union))
                 except Exception:
                     geom = None

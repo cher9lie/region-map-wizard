@@ -236,7 +236,13 @@ class CartopyRenderer(BaseRenderer):
                 # Force matplotlib to finalise axis positions before reading them.
                 # Cartopy GeoAxes shrink themselves to maintain aspect ratio, so
                 # ax.get_position() only returns the real on-canvas bbox after draw.
+                # Use 72 DPI for this intermediate render — ax.get_position() returns
+                # figure-fraction coords that are DPI-independent, so the result is
+                # identical to a full-DPI draw but uses ~17x less memory.
+                _orig_dpi = fig.get_dpi()
+                fig.set_dpi(72)
                 fig.canvas.draw()
+                fig.set_dpi(_orig_dpi)
                 self._add_zoom_connections(fig, ax_china, ax_province, ax_detail, config)
 
             _p(90, "导出...")

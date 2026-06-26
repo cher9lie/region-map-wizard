@@ -111,6 +111,17 @@ pyinstaller --clean --noconfirm rmw.spec
 - [ ] 批量制图（CSV 输入多个城市，一键批出）
 - [ ] 插件市场 / 自定义地图模板导入
 
+## 开发心得
+
+记录了开发过程中遇到的 Bug、根因分析与解决方案，包括：
+
+- PyInstaller 打包 GIS 包的 DLL 加载问题
+- Cartopy GeoAxes aspect 收缩导致连线偏移
+- pipeline 与 renderer 的数据传递边界设计
+- OOM 问题定位与内存优化
+
+详见 [docs/DEV_NOTES.md](docs/DEV_NOTES.md)
+
 ## 贡献
 
 欢迎贡献代码、报告 Bug、改进文档！详见 [CONTRIBUTING.md](CONTRIBUTING.md)。

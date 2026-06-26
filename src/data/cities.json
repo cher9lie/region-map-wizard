@@ -6,13 +6,19 @@
       "adcode": "110000",
       "name": "北京市",
       "name_en": "Beijing",
-      "center": [116.4074, 39.9042],
+      "center": [
+        116.4074,
+        39.9042
+      ],
       "cities": [
         {
-          "adcode": "110100",
+          "adcode": "110000",
           "name": "北京市",
           "name_en": "Beijing",
-          "center": [116.4074, 39.9042]
+          "center": [
+            116.4074,
+            39.9042
+          ]
         }
       ]
     },
@@ -20,13 +26,19 @@
       "adcode": "120000",
       "name": "天津市",
       "name_en": "Tianjin",
-      "center": [117.2010, 39.0842],
+      "center": [
+        117.201,
+        39.0842
+      ],
       "cities": [
         {
-          "adcode": "120100",
+          "adcode": "120000",
           "name": "天津市",
           "name_en": "Tianjin",
-          "center": [117.2010, 39.0842]
+          "center": [
+            117.201,
+            39.0842
+          ]
         }
       ]
     },
@@ -34,73 +46,109 @@
       "adcode": "130000",
       "name": "河北省",
       "name_en": "Hebei",
-      "center": [114.5149, 38.0428],
+      "center": [
+        114.5149,
+        38.0428
+      ],
       "cities": [
         {
           "adcode": "130100",
           "name": "石家庄市",
           "name_en": "Shijiazhuang",
-          "center": [114.5149, 38.0428]
+          "center": [
+            114.5149,
+            38.0428
+          ]
         },
         {
           "adcode": "130200",
           "name": "唐山市",
           "name_en": "Tangshan",
-          "center": [118.1802, 39.6305]
+          "center": [
+            118.1802,
+            39.6305
+          ]
         },
         {
           "adcode": "130300",
           "name": "秦皇岛市",
           "name_en": "Qinhuangdao",
-          "center": [119.6006, 39.9353]
+          "center": [
+            119.6006,
+            39.9353
+          ]
         },
         {
           "adcode": "130400",
           "name": "邯郸市",
           "name_en": "Handan",
-          "center": [114.5388, 36.6254]
+          "center": [
+            114.5388,
+            36.6254
+          ]
         },
         {
           "adcode": "130500",
           "name": "邢台市",
           "name_en": "Xingtai",
-          "center": [114.5088, 37.0682]
+          "center": [
+            114.5088,
+            37.0682
+          ]
         },
         {
           "adcode": "130600",
           "name": "保定市",
           "name_en": "Baoding",
-          "center": [115.4822, 38.8674]
+          "center": [
+            115.4822,
+            38.8674
+          ]
         },
         {
           "adcode": "130700",
           "name": "张家口市",
           "name_en": "Zhangjiakou",
-          "center": [114.8840, 40.8147]
+          "center": [
+            114.884,
+            40.8147
+          ]
         },
         {
           "adcode": "130800",
           "name": "承德市",
           "name_en": "Chengde",
-          "center": [117.9623, 40.9523]
+          "center": [
+            117.9623,
+            40.9523
+          ]
         },
         {
           "adcode": "130900",
           "name": "沧州市",
           "name_en": "Cangzhou",
-          "center": [116.8573, 38.3105]
+          "center": [
+            116.8573,
+            38.3105
+          ]
         },
         {
           "adcode": "131000",
           "name": "廊坊市",
           "name_en": "Langfang",
-          "center": [116.6836, 39.5382]
+          "center": [
+            116.6836,
+            39.5382
+          ]
         },
         {
           "adcode": "131100",
           "name": "衡水市",
           "name_en": "Hengshui",
-          "center": [115.6705, 37.7350]
+          "center": [
+            115.6705,
+            37.735
+          ]
         }
       ]
     },
@@ -108,25 +156,37 @@
       "adcode": "140000",
       "name": "山西省",
       "name_en": "Shanxi",
-      "center": [112.5489, 37.8706],
+      "center": [
+        112.5489,
+        37.8706
+      ],
       "cities": [
         {
           "adcode": "140100",
           "name": "太原市",
           "name_en": "Taiyuan",
-          "center": [112.5489, 37.8706]
+          "center": [
+            112.5489,
+            37.8706
+          ]
         },
         {
           "adcode": "140200",
           "name": "大同市",
           "name_en": "Datong",
-          "center": [113.2954, 40.0903]
+          "center": [
+            113.2954,
+            40.0903
+          ]
         },
         {
           "adcode": "140300",
           "name": "阳泉市",
           "name_en": "Yangquan",
-          "center": [113.5800, 37.8573]
+          "center": [
+            113.58,
+            37.8573
+          ]
         }
       ]
     },
@@ -134,19 +194,28 @@
       "adcode": "150000",
       "name": "内蒙古自治区",
       "name_en": "Inner Mongolia",
-      "center": [111.7654, 40.8180],
+      "center": [
+        111.7654,
+        40.818
+      ],
       "cities": [
         {
           "adcode": "150100",
           "name": "呼和浩特市",
           "name_en": "Hohhot",
-          "center": [111.7654, 40.8180]
+          "center": [
+            111.7654,
+            40.818
+          ]
         },
         {
           "adcode": "150200",
           "name": "包头市",
           "name_en": "Baotou",
-          "center": [109.8401, 40.6580]
+          "center": [
+            109.8401,
+            40.658
+          ]
         }
       ]
     },
@@ -154,19 +223,28 @@
       "adcode": "210000",
       "name": "辽宁省",
       "name_en": "Liaoning",
-      "center": [123.4291, 41.8357],
+      "center": [
+        123.4291,
+        41.8357
+      ],
       "cities": [
         {
           "adcode": "210100",
           "name": "沈阳市",
           "name_en": "Shenyang",
-          "center": [123.4291, 41.8357]
+          "center": [
+            123.4291,
+            41.8357
+          ]
         },
         {
           "adcode": "210200",
           "name": "大连市",
           "name_en": "Dalian",
-          "center": [121.6147, 38.9140]
+          "center": [
+            121.6147,
+            38.914
+          ]
         }
       ]
     },
@@ -174,19 +252,28 @@
       "adcode": "220000",
       "name": "吉林省",
       "name_en": "Jilin",
-      "center": [125.3245, 43.8868],
+      "center": [
+        125.3245,
+        43.8868
+      ],
       "cities": [
         {
           "adcode": "220100",
           "name": "长春市",
           "name_en": "Changchun",
-          "center": [125.3245, 43.8868]
+          "center": [
+            125.3245,
+            43.8868
+          ]
         },
         {
           "adcode": "220200",
           "name": "吉林市",
           "name_en": "Jilin",
-          "center": [126.5500, 43.8376]
+          "center": [
+            126.55,
+            43.8376
+          ]
         }
       ]
     },
@@ -194,19 +281,28 @@
       "adcode": "230000",
       "name": "黑龙江省",
       "name_en": "Heilongjiang",
-      "center": [126.6422, 45.7564],
+      "center": [
+        126.6422,
+        45.7564
+      ],
       "cities": [
         {
           "adcode": "230100",
           "name": "哈尔滨市",
           "name_en": "Harbin",
-          "center": [126.6422, 45.7564]
+          "center": [
+            126.6422,
+            45.7564
+          ]
         },
         {
           "adcode": "230200",
           "name": "齐齐哈尔市",
           "name_en": "Qiqihar",
-          "center": [123.9182, 47.3540]
+          "center": [
+            123.9182,
+            47.354
+          ]
         }
       ]
     },
@@ -214,13 +310,19 @@
       "adcode": "310000",
       "name": "上海市",
       "name_en": "Shanghai",
-      "center": [121.4737, 31.2304],
+      "center": [
+        121.4737,
+        31.2304
+      ],
       "cities": [
         {
-          "adcode": "310100",
+          "adcode": "310000",
           "name": "上海市",
           "name_en": "Shanghai",
-          "center": [121.4737, 31.2304]
+          "center": [
+            121.4737,
+            31.2304
+          ]
         }
       ]
     },
@@ -228,19 +330,28 @@
       "adcode": "320000",
       "name": "江苏省",
       "name_en": "Jiangsu",
-      "center": [118.7677, 32.0413],
+      "center": [
+        118.7677,
+        32.0413
+      ],
       "cities": [
         {
           "adcode": "320100",
           "name": "南京市",
           "name_en": "Nanjing",
-          "center": [118.7677, 32.0413]
+          "center": [
+            118.7677,
+            32.0413
+          ]
         },
         {
           "adcode": "320500",
           "name": "苏州市",
           "name_en": "Suzhou",
-          "center": [120.5853, 31.2990]
+          "center": [
+            120.5853,
+            31.299
+          ]
         }
       ]
     },
@@ -248,19 +359,28 @@
       "adcode": "330000",
       "name": "浙江省",
       "name_en": "Zhejiang",
-      "center": [120.1537, 30.2656],
+      "center": [
+        120.1537,
+        30.2656
+      ],
       "cities": [
         {
           "adcode": "330100",
           "name": "杭州市",
           "name_en": "Hangzhou",
-          "center": [120.1537, 30.2656]
+          "center": [
+            120.1537,
+            30.2656
+          ]
         },
         {
           "adcode": "330200",
           "name": "宁波市",
           "name_en": "Ningbo",
-          "center": [121.5500, 29.8750]
+          "center": [
+            121.55,
+            29.875
+          ]
         }
       ]
     },
@@ -268,13 +388,19 @@
       "adcode": "340000",
       "name": "安徽省",
       "name_en": "Anhui",
-      "center": [117.2851, 31.8612],
+      "center": [
+        117.2851,
+        31.8612
+      ],
       "cities": [
         {
           "adcode": "340100",
           "name": "合肥市",
           "name_en": "Hefei",
-          "center": [117.2851, 31.8612]
+          "center": [
+            117.2851,
+            31.8612
+          ]
         }
       ]
     },
@@ -282,19 +408,28 @@
       "adcode": "350000",
       "name": "福建省",
       "name_en": "Fujian",
-      "center": [119.2960, 26.0745],
+      "center": [
+        119.296,
+        26.0745
+      ],
       "cities": [
         {
           "adcode": "350100",
           "name": "福州市",
           "name_en": "Fuzhou",
-          "center": [119.2960, 26.0745]
+          "center": [
+            119.296,
+            26.0745
+          ]
         },
         {
           "adcode": "350200",
           "name": "厦门市",
           "name_en": "Xiamen",
-          "center": [118.0890, 24.4798]
+          "center": [
+            118.089,
+            24.4798
+          ]
         }
       ]
     },
@@ -302,13 +437,19 @@
       "adcode": "360000",
       "name": "江西省",
       "name_en": "Jiangxi",
-      "center": [115.9177, 28.6760],
+      "center": [
+        115.9177,
+        28.676
+      ],
       "cities": [
         {
           "adcode": "360100",
           "name": "南昌市",
           "name_en": "Nanchang",
-          "center": [115.9177, 28.6760]
+          "center": [
+            115.9177,
+            28.676
+          ]
         }
       ]
     },
@@ -316,103 +457,154 @@
       "adcode": "370000",
       "name": "山东省",
       "name_en": "Shandong",
-      "center": [117.0009, 36.6758],
+      "center": [
+        117.0009,
+        36.6758
+      ],
       "cities": [
         {
           "adcode": "370100",
           "name": "济南市",
           "name_en": "Jinan",
-          "center": [117.0009, 36.6758]
+          "center": [
+            117.0009,
+            36.6758
+          ]
         },
         {
           "adcode": "370200",
           "name": "青岛市",
           "name_en": "Qingdao",
-          "center": [120.3826, 36.0671]
+          "center": [
+            120.3826,
+            36.0671
+          ]
         },
         {
           "adcode": "370300",
           "name": "淄博市",
           "name_en": "Zibo",
-          "center": [118.0545, 36.8131]
+          "center": [
+            118.0545,
+            36.8131
+          ]
         },
         {
           "adcode": "370400",
           "name": "枣庄市",
           "name_en": "Zaozhuang",
-          "center": [117.5576, 34.8561]
+          "center": [
+            117.5576,
+            34.8561
+          ]
         },
         {
           "adcode": "370500",
           "name": "东营市",
           "name_en": "Dongying",
-          "center": [118.4963, 37.4613]
+          "center": [
+            118.4963,
+            37.4613
+          ]
         },
         {
           "adcode": "370600",
           "name": "烟台市",
           "name_en": "Yantai",
-          "center": [121.3912, 37.5390]
+          "center": [
+            121.3912,
+            37.539
+          ]
         },
         {
           "adcode": "370700",
           "name": "潍坊市",
           "name_en": "Weifang",
-          "center": [119.1621, 36.7071]
+          "center": [
+            119.1621,
+            36.7071
+          ]
         },
         {
           "adcode": "370800",
           "name": "济宁市",
           "name_en": "Jining",
-          "center": [116.5871, 35.3797]
+          "center": [
+            116.5871,
+            35.3797
+          ]
         },
         {
           "adcode": "370900",
           "name": "泰安市",
           "name_en": "Tai'an",
-          "center": [117.0878, 36.2004]
+          "center": [
+            117.0878,
+            36.2004
+          ]
         },
         {
           "adcode": "371000",
           "name": "威海市",
           "name_en": "Weihai",
-          "center": [122.1169, 37.5130]
+          "center": [
+            122.1169,
+            37.513
+          ]
         },
         {
           "adcode": "371100",
           "name": "日照市",
           "name_en": "Rizhao",
-          "center": [119.5269, 35.4164]
+          "center": [
+            119.5269,
+            35.4164
+          ]
         },
         {
           "adcode": "371300",
           "name": "临沂市",
           "name_en": "Linyi",
-          "center": [118.3564, 35.1042]
+          "center": [
+            118.3564,
+            35.1042
+          ]
         },
         {
           "adcode": "371400",
           "name": "德州市",
           "name_en": "Dezhou",
-          "center": [116.3571, 37.4362]
+          "center": [
+            116.3571,
+            37.4362
+          ]
         },
         {
           "adcode": "371500",
           "name": "聊城市",
           "name_en": "Liaocheng",
-          "center": [115.9851, 36.4567]
+          "center": [
+            115.9851,
+            36.4567
+          ]
         },
         {
           "adcode": "371600",
           "name": "滨州市",
           "name_en": "Binzhou",
-          "center": [117.9705, 37.3806]
+          "center": [
+            117.9705,
+            37.3806
+          ]
         },
         {
           "adcode": "371700",
           "name": "菏泽市",
           "name_en": "Heze",
-          "center": [115.4800, 35.2333]
+          "center": [
+            115.48,
+            35.2333
+          ]
         }
       ]
     },
@@ -420,19 +612,28 @@
       "adcode": "410000",
       "name": "河南省",
       "name_en": "Henan",
-      "center": [113.6532, 34.7466],
+      "center": [
+        113.6532,
+        34.7466
+      ],
       "cities": [
         {
           "adcode": "410100",
           "name": "郑州市",
           "name_en": "Zhengzhou",
-          "center": [113.6532, 34.7466]
+          "center": [
+            113.6532,
+            34.7466
+          ]
         },
         {
           "adcode": "410300",
           "name": "洛阳市",
           "name_en": "Luoyang",
-          "center": [112.4540, 34.6197]
+          "center": [
+            112.454,
+            34.6197
+          ]
         }
       ]
     },
@@ -440,19 +641,28 @@
       "adcode": "420000",
       "name": "湖北省",
       "name_en": "Hubei",
-      "center": [114.3423, 30.5462],
+      "center": [
+        114.3423,
+        30.5462
+      ],
       "cities": [
         {
           "adcode": "420100",
           "name": "武汉市",
           "name_en": "Wuhan",
-          "center": [114.3423, 30.5462]
+          "center": [
+            114.3423,
+            30.5462
+          ]
         },
         {
           "adcode": "420700",
           "name": "鄂州市",
           "name_en": "Ezhou",
-          "center": [114.8920, 30.3960]
+          "center": [
+            114.892,
+            30.396
+          ]
         }
       ]
     },
@@ -460,13 +670,19 @@
       "adcode": "430000",
       "name": "湖南省",
       "name_en": "Hunan",
-      "center": [112.9823, 28.1941],
+      "center": [
+        112.9823,
+        28.1941
+      ],
       "cities": [
         {
           "adcode": "430100",
           "name": "长沙市",
           "name_en": "Changsha",
-          "center": [112.9823, 28.1941]
+          "center": [
+            112.9823,
+            28.1941
+          ]
         }
       ]
     },
@@ -474,127 +690,190 @@
       "adcode": "440000",
       "name": "广东省",
       "name_en": "Guangdong",
-      "center": [113.2644, 23.1291],
+      "center": [
+        113.2644,
+        23.1291
+      ],
       "cities": [
         {
           "adcode": "440100",
           "name": "广州市",
           "name_en": "Guangzhou",
-          "center": [113.2644, 23.1291]
+          "center": [
+            113.2644,
+            23.1291
+          ]
         },
         {
           "adcode": "440300",
           "name": "深圳市",
           "name_en": "Shenzhen",
-          "center": [114.0579, 22.5431]
+          "center": [
+            114.0579,
+            22.5431
+          ]
         },
         {
           "adcode": "440400",
           "name": "珠海市",
           "name_en": "Zhuhai",
-          "center": [113.5767, 22.2707]
+          "center": [
+            113.5767,
+            22.2707
+          ]
         },
         {
           "adcode": "440500",
           "name": "汕头市",
           "name_en": "Shantou",
-          "center": [116.6820, 23.3540]
+          "center": [
+            116.682,
+            23.354
+          ]
         },
         {
           "adcode": "440600",
           "name": "佛山市",
           "name_en": "Foshan",
-          "center": [113.1221, 23.0218]
+          "center": [
+            113.1221,
+            23.0218
+          ]
         },
         {
           "adcode": "440700",
           "name": "江门市",
           "name_en": "Jiangmen",
-          "center": [113.0815, 22.5789]
+          "center": [
+            113.0815,
+            22.5789
+          ]
         },
         {
           "adcode": "440800",
           "name": "湛江市",
           "name_en": "Zhanjiang",
-          "center": [110.3593, 21.2706]
+          "center": [
+            110.3593,
+            21.2706
+          ]
         },
         {
           "adcode": "440900",
           "name": "茂名市",
           "name_en": "Maoming",
-          "center": [110.9253, 21.6631]
+          "center": [
+            110.9253,
+            21.6631
+          ]
         },
         {
           "adcode": "441200",
           "name": "肇庆市",
           "name_en": "Zhaoqing",
-          "center": [112.4653, 23.0470]
+          "center": [
+            112.4653,
+            23.047
+          ]
         },
         {
           "adcode": "441300",
           "name": "惠州市",
           "name_en": "Huizhou",
-          "center": [114.4161, 23.1118]
+          "center": [
+            114.4161,
+            23.1118
+          ]
         },
         {
           "adcode": "441400",
           "name": "梅州市",
           "name_en": "Meizhou",
-          "center": [116.1226, 24.2888]
+          "center": [
+            116.1226,
+            24.2888
+          ]
         },
         {
           "adcode": "441500",
           "name": "汕尾市",
           "name_en": "Shanwei",
-          "center": [115.3748, 22.7864]
+          "center": [
+            115.3748,
+            22.7864
+          ]
         },
         {
           "adcode": "441600",
           "name": "河源市",
           "name_en": "Heyuan",
-          "center": [114.7028, 23.7460]
+          "center": [
+            114.7028,
+            23.746
+          ]
         },
         {
           "adcode": "441700",
           "name": "阳江市",
           "name_en": "Yangjiang",
-          "center": [111.9823, 21.8580]
+          "center": [
+            111.9823,
+            21.858
+          ]
         },
         {
           "adcode": "441800",
           "name": "清远市",
           "name_en": "Qingyuan",
-          "center": [113.0514, 23.6849]
+          "center": [
+            113.0514,
+            23.6849
+          ]
         },
         {
           "adcode": "441900",
           "name": "东莞市",
           "name_en": "Dongguan",
-          "center": [113.7517, 23.0207]
+          "center": [
+            113.7517,
+            23.0207
+          ]
         },
         {
           "adcode": "442000",
           "name": "中山市",
           "name_en": "Zhongshan",
-          "center": [113.3922, 22.5167]
+          "center": [
+            113.3922,
+            22.5167
+          ]
         },
         {
           "adcode": "445100",
           "name": "潮州市",
           "name_en": "Chaozhou",
-          "center": [116.6221, 23.6565]
+          "center": [
+            116.6221,
+            23.6565
+          ]
         },
         {
           "adcode": "445200",
           "name": "揭州市",
           "name_en": "Jieyang",
-          "center": [116.3728, 23.5498]
+          "center": [
+            116.3728,
+            23.5498
+          ]
         },
         {
           "adcode": "445300",
           "name": "云浮市",
           "name_en": "Yunfu",
-          "center": [112.0445, 22.9218]
+          "center": [
+            112.0445,
+            22.9218
+          ]
         }
       ]
     },
@@ -602,13 +881,19 @@
       "adcode": "450000",
       "name": "广西壮族自治区",
       "name_en": "Guangxi",
-      "center": [108.3200, 22.8150],
+      "center": [
+        108.32,
+        22.815
+      ],
       "cities": [
         {
           "adcode": "450100",
           "name": "南宁市",
           "name_en": "Nanning",
-          "center": [108.3200, 22.8150]
+          "center": [
+            108.32,
+            22.815
+          ]
         }
       ]
     },
@@ -616,19 +901,28 @@
       "adcode": "460000",
       "name": "海南省",
       "name_en": "Hainan",
-      "center": [110.3312, 20.0317],
+      "center": [
+        110.3312,
+        20.0317
+      ],
       "cities": [
         {
           "adcode": "460100",
           "name": "海口市",
           "name_en": "Haikou",
-          "center": [110.3312, 20.0317]
+          "center": [
+            110.3312,
+            20.0317
+          ]
         },
         {
           "adcode": "460200",
           "name": "三亚市",
           "name_en": "Sanya",
-          "center": [109.5120, 18.2520]
+          "center": [
+            109.512,
+            18.252
+          ]
         }
       ]
     },
@@ -636,13 +930,19 @@
       "adcode": "500000",
       "name": "重庆市",
       "name_en": "Chongqing",
-      "center": [106.5516, 29.5630],
+      "center": [
+        106.5516,
+        29.563
+      ],
       "cities": [
         {
-          "adcode": "500100",
+          "adcode": "500000",
           "name": "重庆市",
           "name_en": "Chongqing",
-          "center": [106.5516, 29.5630]
+          "center": [
+            106.5516,
+            29.563
+          ]
         }
       ]
     },
@@ -650,19 +950,28 @@
       "adcode": "510000",
       "name": "四川省",
       "name_en": "Sichuan",
-      "center": [104.0657, 30.6595],
+      "center": [
+        104.0657,
+        30.6595
+      ],
       "cities": [
         {
           "adcode": "510100",
           "name": "成都市",
           "name_en": "Chengdu",
-          "center": [104.0657, 30.6595]
+          "center": [
+            104.0657,
+            30.6595
+          ]
         },
         {
           "adcode": "510300",
           "name": "自贡市",
           "name_en": "Zigong",
-          "center": [104.7790, 29.3391]
+          "center": [
+            104.779,
+            29.3391
+          ]
         }
       ]
     },
@@ -670,13 +979,19 @@
       "adcode": "520000",
       "name": "贵州省",
       "name_en": "Guizhou",
-      "center": [106.7135, 26.5783],
+      "center": [
+        106.7135,
+        26.5783
+      ],
       "cities": [
         {
           "adcode": "520100",
           "name": "贵阳市",
           "name_en": "Guiyang",
-          "center": [106.7135, 26.5783]
+          "center": [
+            106.7135,
+            26.5783
+          ]
         }
       ]
     },
@@ -684,13 +999,19 @@
       "adcode": "530000",
       "name": "云南省",
       "name_en": "Yunnan",
-      "center": [102.7123, 25.0406],
+      "center": [
+        102.7123,
+        25.0406
+      ],
       "cities": [
         {
           "adcode": "530100",
           "name": "昆明市",
           "name_en": "Kunming",
-          "center": [102.7123, 25.0406]
+          "center": [
+            102.7123,
+            25.0406
+          ]
         }
       ]
     },
@@ -698,13 +1019,19 @@
       "adcode": "540000",
       "name": "西藏自治区",
       "name_en": "Tibet",
-      "center": [91.1321, 29.6604],
+      "center": [
+        91.1321,
+        29.6604
+      ],
       "cities": [
         {
           "adcode": "540100",
           "name": "拉萨市",
           "name_en": "Lhasa",
-          "center": [91.1321, 29.6604]
+          "center": [
+            91.1321,
+            29.6604
+          ]
         }
       ]
     },
@@ -712,13 +1039,19 @@
       "adcode": "610000",
       "name": "陕西省",
       "name_en": "Shaanxi",
-      "center": [108.9541, 34.2647],
+      "center": [
+        108.9541,
+        34.2647
+      ],
       "cities": [
         {
           "adcode": "610100",
           "name": "西安市",
           "name_en": "Xi'an",
-          "center": [108.9541, 34.2647]
+          "center": [
+            108.9541,
+            34.2647
+          ]
         }
       ]
     },
@@ -726,13 +1059,19 @@
       "adcode": "620000",
       "name": "甘肃省",
       "name_en": "Gansu",
-      "center": [103.8239, 36.0585],
+      "center": [
+        103.8239,
+        36.0585
+      ],
       "cities": [
         {
           "adcode": "620100",
           "name": "兰州市",
           "name_en": "Lanzhou",
-          "center": [103.8239, 36.0585]
+          "center": [
+            103.8239,
+            36.0585
+          ]
         }
       ]
     },
@@ -740,13 +1079,19 @@
       "adcode": "630000",
       "name": "青海省",
       "name_en": "Qinghai",
-      "center": [101.7782, 36.6232],
+      "center": [
+        101.7782,
+        36.6232
+      ],
       "cities": [
         {
           "adcode": "630100",
           "name": "西宁市",
           "name_en": "Xining",
-          "center": [101.7782, 36.6232]
+          "center": [
+            101.7782,
+            36.6232
+          ]
         }
       ]
     },
@@ -754,13 +1099,19 @@
       "adcode": "640000",
       "name": "宁夏回族自治区",
       "name_en": "Ningxia",
-      "center": [106.2782, 38.4664],
+      "center": [
+        106.2782,
+        38.4664
+      ],
       "cities": [
         {
           "adcode": "640100",
           "name": "银川市",
           "name_en": "Yinchuan",
-          "center": [106.2782, 38.4664]
+          "center": [
+            106.2782,
+            38.4664
+          ]
         }
       ]
     },
@@ -768,13 +1119,19 @@
       "adcode": "650000",
       "name": "新疆维吾尔自治区",
       "name_en": "Xinjiang",
-      "center": [87.6177, 43.7928],
+      "center": [
+        87.6177,
+        43.7928
+      ],
       "cities": [
         {
           "adcode": "650100",
           "name": "乌鲁木齐市",
           "name_en": "Urumqi",
-          "center": [87.6177, 43.7928]
+          "center": [
+            87.6177,
+            43.7928
+          ]
         }
       ]
     },
@@ -782,13 +1139,19 @@
       "adcode": "710000",
       "name": "台湾省",
       "name_en": "Taiwan",
-      "center": [121.5654, 25.0376],
+      "center": [
+        121.5654,
+        25.0376
+      ],
       "cities": [
         {
           "adcode": "710100",
           "name": "台北市",
           "name_en": "Taipei",
-          "center": [121.5654, 25.0376]
+          "center": [
+            121.5654,
+            25.0376
+          ]
         }
       ]
     },
@@ -796,13 +1159,19 @@
       "adcode": "810000",
       "name": "香港特别行政区",
       "name_en": "Hong Kong",
-      "center": [114.1095, 22.3964],
+      "center": [
+        114.1095,
+        22.3964
+      ],
       "cities": [
         {
           "adcode": "810000",
           "name": "香港",
           "name_en": "Hong Kong",
-          "center": [114.1095, 22.3964]
+          "center": [
+            114.1095,
+            22.3964
+          ]
         }
       ]
     },
@@ -810,13 +1179,19 @@
       "adcode": "820000",
       "name": "澳门特别行政区",
       "name_en": "Macao",
-      "center": [113.5435, 22.1987],
+      "center": [
+        113.5435,
+        22.1987
+      ],
       "cities": [
         {
           "adcode": "820000",
           "name": "澳门",
           "name_en": "Macao",
-          "center": [113.5435, 22.1987]
+          "center": [
+            113.5435,
+            22.1987
+          ]
         }
       ]
     }

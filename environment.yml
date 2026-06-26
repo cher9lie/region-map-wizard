@@ -1,0 +1,21 @@
+name: rmw
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pyqt=5.15
+  - earthengine-api>=1.4
+  - geemap>=0.35
+  - geopandas>=1.0
+  - rasterio>=1.4
+  - shapely>=2.0
+  - numpy>=1.26
+  - pillow>=10.0
+  - cartopy>=0.22
+  - matplotlib>=3.8
+  - pytest>=8.0
+  - ruff>=0.6
+  - pip:
+    - matplotlib-scalebar>=0.8
+    - pre-commit>=3.8

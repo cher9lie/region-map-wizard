@@ -1,0 +1,45 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.venv/
+env/
+venv/
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Cache
+.rmw_cache/
+*.tif
+*.tiff
+!tests/fixtures/*.tif
+
+# Output
+output/
+results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# QGIS
+*.qgz~
+*.qgs~
+*.gpkg-wal
+*.gpkg-shm

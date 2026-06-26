@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "region-map-wizard"
+version = "1.0.0a1"
+description = "一键生成科研论文级三级研究区区位图 (中国→省→市)，支持 GEE 数据自动下载，QGIS/ArcGIS/Cartopy 多引擎渲染"
+readme = "README.md"
+license = "GPL-3.0-only"
+requires-python = ">=3.10"
+authors = [
+    { name = "Region Map Wizard Contributors" },
+]
+keywords = ["GIS", "map", "study-area", "location-map", "QGIS", "GEE", "remote-sensing", "cartography"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "PyQt5>=5.15",
+    "earthengine-api>=1.4",
+    "geemap>=0.35",
+    "geopandas>=1.0",
+    "rasterio>=1.4",
+    "shapely>=2.0",
+    "numpy>=1.26",
+    "Pillow>=10.0",
+]
+
+[project.optional-dependencies]
+cartopy = [
+    "cartopy>=0.22",
+    "matplotlib>=3.8",
+    "matplotlib-scalebar>=0.8",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+    "ruff>=0.6",
+    "pre-commit>=3.8",
+]
+
+[project.urls]
+Homepage = "https://github.com/region-map-wizard/region-map-wizard"
+Documentation = "https://github.com/region-map-wizard/region-map-wizard/tree/main/docs"
+Repository = "https://github.com/region-map-wizard/region-map-wizard"
+Issues = "https://github.com/region-map-wizard/region-map-wizard/issues"
+
+[project.scripts]
+rmw = "src.main:main"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "qgis: requires QGIS installation",
+    "gee: requires GEE authentication",
+    "slow: long-running tests",
+]

@@ -74,13 +74,22 @@ class TestAuthentication:
             with pytest.raises(GEEAuthFailedError):
                 fetcher.authenticate()
 
-    def test_authenticate_calls_ee_initialize(self, fetcher):
+    def test_authenticate_calls_ee_authenticate_only(self, fetcher):
+        # authenticate() now only runs OAuth; initialize() is a separate step
         mock_ee = MagicMock()
         with patch("src.core.gee_fetcher._EE_AVAILABLE", True), \
              patch("src.core.gee_fetcher.ee", mock_ee):
             fetcher.authenticate()
             mock_ee.Authenticate.assert_called_once()
+            mock_ee.Initialize.assert_not_called()
+
+    def test_initialize_calls_ee_initialize(self, fetcher):
+        mock_ee = MagicMock()
+        with patch("src.core.gee_fetcher._EE_AVAILABLE", True), \
+             patch("src.core.gee_fetcher.ee", mock_ee):
+            fetcher.initialize("test-project")
             mock_ee.Initialize.assert_called_once_with(project="test-project")
+            assert fetcher._authenticated is True
 
     def test_authenticate_raises_on_ee_error(self, fetcher):
         mock_ee = MagicMock()

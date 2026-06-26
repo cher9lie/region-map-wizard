@@ -48,21 +48,78 @@ class GEEFetcher:
     # ── Auth ───────────────────────────────────────────────────────────────────
 
     def authenticate(self) -> bool:
-        """Run GEE auth flow; opens browser on first run, reuses credentials later."""
+        """Step 1: OAuth browser flow only — saves credentials, no project needed."""
         if not _EE_AVAILABLE:
             raise GEEAuthFailedError("earthengine-api 未安装")
         try:
             ee.Authenticate()
-            ee.Initialize(project=self._project_id)
+            return True
+        except Exception as exc:
+            raise GEEAuthFailedError(str(exc)) from exc
+
+    def initialize(self, project_id: str) -> bool:
+        """Step 2: Initialize EE with the chosen Cloud project."""
+        if not _EE_AVAILABLE:
+            raise GEEAuthFailedError("earthengine-api 未安装")
+        try:
+            ee.Initialize(project=project_id)
+            self._project_id = project_id
             self._authenticated = True
             return True
         except Exception as exc:
             raise GEEAuthFailedError(str(exc)) from exc
 
+    def list_projects(self) -> list[str]:
+        """Return Cloud project IDs accessible to the authenticated user.
+
+        Uses the saved OAuth credentials (written by ee.Authenticate()) to call
+        the Cloud Resource Manager API via urllib — no extra packages needed.
+        """
+        import json
+        import urllib.request
+        import urllib.error
+
+        creds_path = Path.home() / ".config" / "earthengine" / "credentials"
+        if not creds_path.exists():
+            raise GEEAuthFailedError("尚未登录，请先完成 Google 账号授权")
+
+        with creds_path.open() as f:
+            creds = json.load(f)
+
+        # Refresh the access token using google-auth (installed with earthengine-api)
+        try:
+            import google.oauth2.credentials
+            import google.auth.transport.requests
+
+            gc = google.oauth2.credentials.Credentials(
+                token=creds.get("access_token"),
+                refresh_token=creds.get("refresh_token"),
+                client_id=creds.get("client_id"),
+                client_secret=creds.get("client_secret"),
+                token_uri="https://oauth2.googleapis.com/token",
+            )
+            gc.refresh(google.auth.transport.requests.Request())
+            token = gc.token
+        except Exception:
+            # Fallback: use stored token directly (may be expired)
+            token = creds.get("access_token", "")
+
+        url = "https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            raise GEEAuthFailedError(f"无法获取项目列表 (HTTP {exc.code})，请检查网络或重新登录") from exc
+        except Exception as exc:
+            raise GEEAuthFailedError(f"获取项目列表失败: {exc}") from exc
+
+        return [p["projectId"] for p in data.get("projects", [])]
+
     def is_authenticated(self) -> bool:
         if self._authenticated:
             return True
-        if not _EE_AVAILABLE:
+        if not _EE_AVAILABLE or not self._project_id:
             return False
         try:
             ee.Initialize(project=self._project_id)
@@ -70,6 +127,10 @@ class GEEFetcher:
             return True
         except Exception:
             return False
+
+    def has_credentials(self) -> bool:
+        """True if the OAuth credentials file exists (user has logged in before)."""
+        return (Path.home() / ".config" / "earthengine" / "credentials").exists()
 
     # ── Public fetch methods ───────────────────────────────────────────────────
 

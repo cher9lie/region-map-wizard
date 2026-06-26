@@ -72,12 +72,31 @@ def build_gpkg(input_dir: Path, output: Path) -> None:
         city_raw["gb"].notna() & (city_raw["gb"] != "") & (city_raw["name"] != "境界线")
     ].copy()
     city["adcode"] = _strip_gb(city["gb"])
-    # Derive province adcode from first 2 digits of city adcode + '0000'
     city["province_adcode"] = city["adcode"].str[:2] + "0000"
-    city = city.rename(columns={"name": "name"})
     city = city[["adcode", "province_adcode", "name", "geometry"]].to_crs(TARGET_CRS)
     city["geometry"] = city["geometry"].buffer(0)
-    print(f"  市级要素: {len(city)} 个")
+
+    # ── District layer for direct-controlled municipalities ───────────────────
+    # 北京110/天津120/上海310/重庆500: replace single-city entry with actual districts
+    ZHIXIA = {"110000", "120000", "310000", "500000"}
+    city = city[~city["province_adcode"].isin(ZHIXIA)].copy()
+
+    county_path = input_dir / "中国_县.geojson"
+    if county_path.exists():
+        print("读取县/区级数据（直辖市用）…")
+        county_raw = gpd.read_file(county_path)
+        county = county_raw[
+            county_raw["gb"].notna() & (county_raw["gb"] != "") & (county_raw["name"] != "境界线")
+        ].copy()
+        county["adcode"] = _strip_gb(county["gb"])
+        county["province_adcode"] = county["adcode"].str[:2] + "0000"
+        zhixia_districts = county[county["province_adcode"].isin(ZHIXIA)].copy()
+        zhixia_districts = zhixia_districts[["adcode", "province_adcode", "name", "geometry"]].to_crs(TARGET_CRS)
+        zhixia_districts["geometry"] = zhixia_districts["geometry"].buffer(0)
+        city = pd.concat([city, zhixia_districts], ignore_index=True)
+        print(f"  直辖市区级要素: {len(zhixia_districts)} 个")
+
+    print(f"  市级要素合计: {len(city)} 个")
 
     # ── Write GPKG ────────────────────────────────────────────────────────────
     if output.exists():

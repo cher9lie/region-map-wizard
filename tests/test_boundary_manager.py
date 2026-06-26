@@ -51,10 +51,12 @@ class TestListProvinces:
 
 
 class TestListCities:
-    def test_beijing_has_one_city(self, manager):
+    def test_beijing_has_districts(self, manager):
+        # 北京是直辖市，城市层包含其16个区
         cities = manager.list_cities("110000")
-        assert len(cities) == 1
-        assert cities[0]["adcode"] == "110000"
+        assert len(cities) >= 10
+        adcodes = [c["adcode"] for c in cities]
+        assert "110101" in adcodes  # 东城区
 
     def test_shandong_has_many_cities(self, manager):
         cities = manager.list_cities("370000")
@@ -101,8 +103,8 @@ class TestGpkgBoundaries:
         assert not gdf.empty
 
     def test_get_city_boundary(self, real_manager):
-        # 北京是直辖市，天地图数据中 city 层 adcode 与省级相同 (110000)
-        gdf = real_manager.get_boundary("110000", "city")
+        # 使用东城区 adcode (直辖市现在用区级 adcode)
+        gdf = real_manager.get_boundary("110101", "city")
         assert not gdf.empty
 
     def test_boundary_not_found_raises(self, real_manager):
@@ -110,7 +112,7 @@ class TestGpkgBoundaries:
             real_manager.get_boundary("999999", "city")
 
     def test_get_context_boundaries(self, real_manager):
-        country, province, city, all_prov = real_manager.get_context_boundaries("110000")
+        country, province, city, all_prov = real_manager.get_context_boundaries("110101")
         assert not country.empty
         assert not province.empty
         assert not city.empty

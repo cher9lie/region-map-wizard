@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -11,28 +10,27 @@ try:
         QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QLabel, QComboBox, QPushButton, QProgressBar,
         QTextEdit, QFileDialog, QGroupBox, QFormLayout,
-        QLineEdit, QMessageBox, QSizePolicy, QApplication,
-        QStatusBar,
+        QLineEdit, QMessageBox, QApplication, QStatusBar,
+        QScrollArea, QSizePolicy, QFrame,
     )
-    from PyQt5.QtCore import Qt, QThread
-    from PyQt5.QtGui import QFont, QIcon
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtGui import QFont, QPixmap, QColor
     _QT_AVAILABLE = True
 except ImportError:
     _QT_AVAILABLE = False
 
 from src.core.config_manager import ConfigManager
 from src.core.boundary_manager import BoundaryManager
-from src.core.gee_fetcher import GEEFetcher
 from src.core.pipeline import MapWizardPipeline
 from src.renderers.base import RenderConfig
-from src.constants import APP_NAME, VERSION, DEFAULT_CACHE_DIR_NAME
-from src.core.cache_manager import CacheManager
+from src.constants import APP_NAME, VERSION
 
 _DATA_DIR = Path(__file__).parent.parent / "data"
 
 if _QT_AVAILABLE:
     class MainWindow(QMainWindow):
-        """Primary UI: province/city selector, engine selector, run button, log panel."""
+        """Primary UI: province/city selector, engine selector, run button,
+        log panel (left), image preview (right)."""
 
         def __init__(self) -> None:
             super().__init__()
@@ -41,12 +39,12 @@ if _QT_AVAILABLE:
             self._worker: Optional[object] = None
             self._custom_shp: Optional[Path] = None
             self._custom_name: str = ""
-
+            self._last_output: Optional[str] = None
             self._pipeline = MapWizardPipeline(self._cfg)
 
             self.setWindowTitle(f"{APP_NAME} v{VERSION}")
-            self.setMinimumSize(720, 580)
-            self.resize(860, 680)
+            self.setMinimumSize(900, 620)
+            self.resize(1100, 720)
 
             self._build_ui()
             self._populate_provinces()
@@ -59,84 +57,100 @@ if _QT_AVAILABLE:
             self.setCentralWidget(central)
             root = QHBoxLayout(central)
             root.setContentsMargins(8, 8, 8, 8)
+            root.setSpacing(8)
 
-            # ── Left panel ────────────────────────────────────────────────────
+            # ── Left panel (controls) ──────────────────────────────────────────
             left = QVBoxLayout()
             left.setSpacing(6)
             root.addLayout(left, stretch=0)
 
-            # Study area group
+            # Study area
             area_group = QGroupBox("研究区选择")
             area_form = QFormLayout(area_group)
+            area_form.setSpacing(4)
 
             self._province_combo = QComboBox()
             self._province_combo.currentIndexChanged.connect(self._on_province_changed)
             area_form.addRow("省份:", self._province_combo)
 
             self._city_combo = QComboBox()
-            area_form.addRow("城市:", self._city_combo)
+            area_form.addRow("城市/区:", self._city_combo)
 
             shp_row = QHBoxLayout()
             self._shp_label = QLabel("（未选择）")
             self._shp_label.setWordWrap(True)
             shp_btn = QPushButton("导入 SHP…")
-            shp_btn.setFixedWidth(90)
+            shp_btn.setFixedWidth(86)
             shp_btn.clicked.connect(self._import_shp)
             shp_row.addWidget(self._shp_label)
             shp_row.addWidget(shp_btn)
             area_form.addRow("自定义:", shp_row)
-
             left.addWidget(area_group)
 
             # Data options
             data_group = QGroupBox("数据选项")
             data_form = QFormLayout(data_group)
+            data_form.setSpacing(4)
 
             self._data_type_combo = QComboBox()
-            self._data_type_combo.addItems(["DEM 高程", "山体阴影", "Sentinel-2 真彩色", "仅矢量"])
+            self._data_type_combo.addItems(["仅矢量", "DEM 高程", "山体阴影", "Sentinel-2 真彩色"])
             data_form.addRow("数据类型:", self._data_type_combo)
 
             self._color_ramp_combo = QComboBox()
             self._color_ramp_combo.addItems(["dem_hypsometric", "dem_green_brown"])
             data_form.addRow("色带:", self._color_ramp_combo)
 
+            self._lang_combo = QComboBox()
+            self._lang_combo.addItem("中文", userData="zh")
+            self._lang_combo.addItem("English", userData="en")
+            data_form.addRow("语言:", self._lang_combo)
             left.addWidget(data_group)
 
             # Engine & output
             out_group = QGroupBox("渲染与输出")
             out_form = QFormLayout(out_group)
+            out_form.setSpacing(4)
 
             self._engine_combo = QComboBox()
             self._populate_engines()
             out_form.addRow("渲染引擎:", self._engine_combo)
 
-            fmt_combo = QComboBox()
-            fmt_combo.addItems(["JPG", "PNG", "PDF"])
-            self._fmt_combo = fmt_combo
-            out_form.addRow("输出格式:", fmt_combo)
+            self._fmt_combo = QComboBox()
+            self._fmt_combo.addItems(["JPG", "PNG", "PDF"])
+            out_form.addRow("格式:", self._fmt_combo)
 
-            dpi_combo = QComboBox()
-            dpi_combo.addItems(["150", "300", "600"])
-            dpi_combo.setCurrentText("300")
-            self._dpi_combo = dpi_combo
-            out_form.addRow("DPI:", dpi_combo)
+            self._dpi_combo = QComboBox()
+            self._dpi_combo.addItems(["150", "300", "600"])
+            self._dpi_combo.setCurrentText("300")
+            out_form.addRow("DPI:", self._dpi_combo)
 
             dir_row = QHBoxLayout()
             self._out_dir_edit = QLineEdit()
             self._out_dir_edit.setPlaceholderText("输出目录…")
             dir_btn = QPushButton("…")
-            dir_btn.setFixedWidth(30)
+            dir_btn.setFixedWidth(28)
             dir_btn.clicked.connect(self._pick_output_dir)
             dir_row.addWidget(self._out_dir_edit)
             dir_row.addWidget(dir_btn)
             out_form.addRow("输出目录:", dir_row)
-
             left.addWidget(out_group)
 
             # GEE auth button
             gee_btn = QPushButton("GEE 认证设置…")
             gee_btn.clicked.connect(self._open_gee_dialog)
             left.addWidget(gee_btn)
+
+            # Log panel — below GEE auth
+            log_label = QLabel("运行日志:")
+            log_label.setStyleSheet("color: #555; font-size: 11px;")
+            left.addWidget(log_label)
+
+            self._log = QTextEdit()
+            self._log.setReadOnly(True)
+            self._log.setFont(QFont("Consolas", 8))
+            self._log.setFixedHeight(110)
+            self._log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            left.addWidget(self._log)
 
             left.addStretch()
 
@@ -147,26 +161,44 @@ if _QT_AVAILABLE:
             self._run_btn.clicked.connect(self._on_run_cancel)
             left.addWidget(self._run_btn)
 
-            # ── Right panel ───────────────────────────────────────────────────
+            # ── Right panel (preview) ──────────────────────────────────────────
             right = QVBoxLayout()
+            right.setSpacing(4)
             root.addLayout(right, stretch=1)
 
-            # Progress bar
+            # Progress row
+            prog_row = QHBoxLayout()
             self._progress = QProgressBar()
             self._progress.setRange(0, 100)
             self._progress.setValue(0)
-            right.addWidget(self._progress)
-
+            self._progress.setFixedHeight(16)
+            prog_row.addWidget(self._progress)
             self._progress_label = QLabel("就绪")
-            right.addWidget(self._progress_label)
+            self._progress_label.setFixedWidth(160)
+            self._progress_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            prog_row.addWidget(self._progress_label)
+            right.addLayout(prog_row)
 
-            # Log panel
-            self._log = QTextEdit()
-            self._log.setReadOnly(True)
-            self._log.setFont(QFont("Consolas", 9))
-            right.addWidget(self._log)
+            # Image preview area
+            preview_frame = QFrame()
+            preview_frame.setFrameShape(QFrame.StyledPanel)
+            preview_frame.setStyleSheet("background:#F0F0F0; border:1px solid #CCCCCC; border-radius:4px;")
+            preview_layout = QVBoxLayout(preview_frame)
+            preview_layout.setContentsMargins(0, 0, 0, 0)
 
-            # Status bar
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setAlignment(Qt.AlignCenter)
+            scroll.setStyleSheet("border:none; background:transparent;")
+
+            self._preview_label = QLabel("制作完成后，地图将在此处显示")
+            self._preview_label.setAlignment(Qt.AlignCenter)
+            self._preview_label.setStyleSheet("color:#AAAAAA; font-size:13px;")
+            self._preview_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            scroll.setWidget(self._preview_label)
+            preview_layout.addWidget(scroll)
+            right.addWidget(preview_frame, stretch=1)
+
             self.setStatusBar(QStatusBar())
 
         # ── Populate helpers ───────────────────────────────────────────────────
@@ -177,29 +209,20 @@ if _QT_AVAILABLE:
                 self._province_combo.addItem(p["name"], userData=p["adcode"])
 
         def _populate_engines(self) -> None:
-            engines = [
-                ("QGIS", "qgis"),
-                ("Cartopy (纯Python)", "cartopy"),
-                ("ArcGIS Pro", "arcgis"),
-            ]
             from src.renderers.qgis_renderer import QGISRenderer
             from src.renderers.cartopy_renderer import CartopyRenderer
             from src.renderers.arcgis_renderer import ArcGISRenderer
-            renderers = {
-                "qgis": QGISRenderer(),
-                "cartopy": CartopyRenderer(),
-                "arcgis": ArcGISRenderer(),
-            }
-            for label, key in engines:
-                avail, reason = renderers[key].check_available()
+            for label, key, cls in [
+                ("QGIS", "qgis", QGISRenderer),
+                ("Cartopy (纯Python)", "cartopy", CartopyRenderer),
+                ("ArcGIS Pro", "arcgis", ArcGISRenderer),
+            ]:
+                avail, _ = cls().check_available()
                 display = label if avail else f"{label} (不可用)"
                 self._engine_combo.addItem(display, userData=key)
-                idx = self._engine_combo.count() - 1
                 if not avail:
-                    # Grey out but keep selectable so user sees the reason
-                    item = self._engine_combo.model().item(idx)
-                    from PyQt5.QtGui import QColor
-                    item.setForeground(QColor("#999999"))
+                    idx = self._engine_combo.count() - 1
+                    self._engine_combo.model().item(idx).setForeground(QColor("#999999"))
 
         def _load_saved_state(self) -> None:
             last_prov = self._cfg.get("last_province", "110000")
@@ -256,40 +279,47 @@ if _QT_AVAILABLE:
                 QMessageBox.warning(self, "提示", "请先选择输出目录")
                 return
 
+            city_adcode = self._city_combo.currentData() or ""
             city_name = self._city_combo.currentText()
+            province_adcode = self._province_combo.currentData() or ""
             province_name = self._province_combo.currentText()
             fmt = self._fmt_combo.currentText().lower()
             dpi = int(self._dpi_combo.currentText())
             engine_key = self._engine_combo.currentData() or "cartopy"
+            language = self._lang_combo.currentData() or "zh"
 
             data_map = {
-                "DEM 高程": "dem",
-                "山体阴影": "hillshade",
-                "Sentinel-2 真彩色": "sentinel2",
-                "仅矢量": "none",
+                "DEM 高程": "dem", "山体阴影": "hillshade",
+                "Sentinel-2 真彩色": "sentinel2", "仅矢量": "none",
             }
-            data_type = data_map.get(self._data_type_combo.currentText(), "dem")
+            data_type = data_map.get(self._data_type_combo.currentText(), "none")
 
-            output_path = Path(out_dir) / f"{city_name}_区位图.{fmt}"
+            safe_name = city_name.replace("/", "_").replace("\\", "_")
+            output_path = Path(out_dir) / f"{safe_name}_区位图.{fmt}"
 
+            gpkg = _DATA_DIR / "china_admin.gpkg"
             config = RenderConfig(
-                country_boundary=_DATA_DIR / "china_admin.gpkg",
-                province_boundary=_DATA_DIR / "china_admin.gpkg",
-                city_boundary=_DATA_DIR / "china_admin.gpkg",
+                country_boundary=gpkg,
+                province_boundary=gpkg,
+                city_boundary=gpkg,
                 province_name=province_name,
                 city_name=city_name,
+                province_adcode=province_adcode,
+                city_adcode=city_adcode,
                 raster_path=None,
                 data_type=data_type,
                 color_ramp=self._color_ramp_combo.currentText(),
                 output_path=output_path,
                 output_format=fmt,
                 dpi=dpi,
+                language=language,
                 custom_shp=self._custom_shp,
                 custom_name=self._custom_name or None,
             )
 
             self._cfg.set("last_renderer", engine_key)
             self._cfg.set("last_output_dir", out_dir)
+            self._cfg.set("last_province", province_adcode)
 
             from src.gui.worker import MapWorker
             self._worker = MapWorker(self._pipeline, config)
@@ -300,6 +330,8 @@ if _QT_AVAILABLE:
 
             self._run_btn.setText("取消")
             self._progress.setValue(0)
+            self._preview_label.setText("正在制作，请稍候…")
+            self._preview_label.setPixmap(QPixmap())
             self.append_log(f"开始制作: {city_name} ({engine_key})")
             self._worker.start()
 
@@ -311,16 +343,35 @@ if _QT_AVAILABLE:
 
         def append_log(self, msg: str) -> None:
             self._log.append(msg)
-            sb = self._log.verticalScrollBar()
-            sb.setValue(sb.maximum())
+            self._log.verticalScrollBar().setValue(
+                self._log.verticalScrollBar().maximum()
+            )
 
         def on_finished(self, output_path: str) -> None:
             self._run_btn.setText("一键制作")
             self._progress.setValue(100)
-            self.append_log(f"✓ 输出完成: {output_path}")
-            self.statusBar().showMessage(f"完成: {output_path}", 5000)
+            self.append_log(f"完成: {output_path}")
+            self.statusBar().showMessage(f"完成: {output_path}", 8000)
+            self._show_preview(output_path)
 
         def on_error(self, error_msg: str) -> None:
             self._run_btn.setText("一键制作")
-            self.append_log(f"✗ 错误: {error_msg}")
+            self._preview_label.setText("制作失败")
+            self.append_log(f"错误: {error_msg}")
             QMessageBox.critical(self, "制图失败", error_msg)
+
+        def _show_preview(self, path: str) -> None:
+            """Load and display the output image in the preview label."""
+            pix = QPixmap(path)
+            if pix.isNull():
+                self._preview_label.setText(f"无法预览: {path}")
+                return
+            # Scale to fit the label while keeping aspect ratio
+            avail = self._preview_label.parent().size()
+            pix_scaled = pix.scaled(
+                avail.width() - 10, avail.height() - 10,
+                Qt.KeepAspectRatio, Qt.SmoothTransformation,
+            )
+            self._preview_label.setPixmap(pix_scaled)
+            self._preview_label.setToolTip(path)
+            self._last_output = path

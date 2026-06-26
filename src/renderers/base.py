@@ -38,6 +38,10 @@ class RenderConfig:
     highlight_color: str = "#FF0000"
     highlight_width: float = 1.5
 
+    # ── Adcodes (used by renderers to filter gpkg layers correctly) ───────────
+    province_adcode: str = ""
+    city_adcode: str = ""
+
     # ── Custom SHP mode ───────────────────────────────────────────────────────
     custom_shp: Optional[Path] = None
     custom_name: Optional[str] = None

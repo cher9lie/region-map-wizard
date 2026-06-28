@@ -81,6 +81,15 @@ pyinstaller --clean --noconfirm rmw.spec
   - [x] Lambert 等角圆锥投影中国全图 + 适当 extent 配置
 - [x] 后台引擎探测线程（避免启动时 GUI 阻塞）
 - [x] PyInstaller 独立 exe 打包（含 GDAL/GEOS/PROJ DLL 自动注册）
+- [x] **ArcGIS Pro 渲染引擎**（架构实现完成，待 ArcGIS Pro 环境联调）
+  - [x] 注册表自动检测 + propy.bat 环境发现
+  - [x] subprocess 进程隔离（主进程不 import arcpy）
+  - [x] JSON 行协议进度通信
+  - [x] 三图框布局（模板法优先 + 全代码 fallback）
+  - [x] 符号化：DEM 分层设色 / 山体阴影灰度 / Sentinel-2 RGB
+  - [x] CIM Access 经纬网间距设置
+  - [x] ArcGIS Pro 3.4+ `CreateExportFormat` 导出 API
+  - [x] 模板制作指南 (`docs/arcgis_template_guide.md`)
 
 ### 开发计划
 
@@ -98,12 +107,12 @@ pyinstaller --clean --noconfirm rmw.spec
 - [ ] 支持 QGIS 符号库中的地图样式（色带、线型等）
 - [ ] 提供 QGIS 插件形式的分发包（`.zip` 插件格式）
 
-#### 中期 — ArcGIS Pro 适配
+#### 中期 — ArcGIS Pro 适配（框架已就绪，待实机联调）
 
-- [ ] 基于 **arcpy** 实现 `ArcGISRenderer`，通过 `subprocess` 调用 ArcGIS Pro Python 环境
-- [ ] 复用 ArcGIS Pro Layout 模板（`.pagx`）自动填充地图框
-- [ ] 支持 ArcGIS Pro 符号系统（地形晕渲、标注等）
-- [ ] 自动检测 ArcGIS Pro 安装路径（注册表查询）
+- [x] 基于 **arcpy** 实现 `ArcGISRenderer`，通过 `subprocess` 调用 ArcGIS Pro Python 环境
+- [x] 自动检测 ArcGIS Pro 安装路径（注册表 → 常见路径 → 环境变量）
+- [ ] 制作预制 `.aprx` 模板并打包（见 [模板制作指南](docs/arcgis_template_guide.md)）
+- [ ] ArcGIS Pro 实机测试与符号化细节调整
 
 #### 长期
 

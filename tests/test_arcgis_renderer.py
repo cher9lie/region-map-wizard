@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -56,7 +56,7 @@ class TestCheckAvailable:
             patch.object(renderer, "_find_propy", return_value=fake_propy),
             patch("subprocess.run") as mock_run,
         ):
-            mock_run.return_value = MagicMock(returncode=0, stdout="3.4.0\n", stderr="")
+            mock_run.return_value = MagicMock(returncode=0, stdout=b"3.4.0\n", stderr=b"")
             ok, reason = renderer.check_available()
         assert ok is True
         assert "ArcGIS Pro 3.4.0" in reason
@@ -84,7 +84,7 @@ class TestCheckAvailable:
             patch("subprocess.run") as mock_run,
         ):
             mock_run.return_value = MagicMock(
-                returncode=1, stdout="", stderr="No module named 'arcpy'"
+                returncode=1, stdout=b"", stderr=b"No module named 'arcpy'"
             )
             ok, reason = renderer.check_available()
         assert ok is False
@@ -112,8 +112,8 @@ class TestRenderSubprocess:
             "message": "完成", "output": str(sample_config.output_path)
         })
         mock_proc = MagicMock()
-        mock_proc.stdout = iter([done_line + "\n"])
-        mock_proc.stderr = StringIO("")
+        mock_proc.stdout = iter([(done_line + "\n").encode("utf-8")])
+        mock_proc.stderr = BytesIO(b"")
         mock_proc.returncode = 0
         mock_proc.wait.return_value = 0
 
@@ -135,18 +135,18 @@ class TestRenderSubprocess:
         """progress_callback must be called for each non-done, non-error step."""
         self._setup_available(renderer, tmp_path)
         stdout_lines = [
-            json.dumps({"step": "loading", "progress": 10, "message": "加载模板..."}) + "\n",
-            json.dumps({"step": "data",    "progress": 30, "message": "加载数据..."}) + "\n",
-            json.dumps({"step": "render",  "progress": 60, "message": "渲染..."})    + "\n",
-            json.dumps({"step": "export",  "progress": 90, "message": "导出..."})    + "\n",
-            json.dumps({
+            (json.dumps({"step": "loading", "progress": 10, "message": "加载模板..."}) + "\n").encode(),
+            (json.dumps({"step": "data",    "progress": 30, "message": "加载数据..."}) + "\n").encode(),
+            (json.dumps({"step": "render",  "progress": 60, "message": "渲染..."})    + "\n").encode(),
+            (json.dumps({"step": "export",  "progress": 90, "message": "导出..."})    + "\n").encode(),
+            (json.dumps({
                 "step": "done", "progress": 100, "message": "完成",
                 "output": str(sample_config.output_path)
-            }) + "\n",
+            }) + "\n").encode(),
         ]
         mock_proc = MagicMock()
         mock_proc.stdout = iter(stdout_lines)
-        mock_proc.stderr = StringIO("")
+        mock_proc.stderr = BytesIO(b"")
         mock_proc.returncode = 0
         mock_proc.wait.return_value = 0
 
@@ -167,10 +167,10 @@ class TestRenderSubprocess:
     ) -> None:
         """When worker emits {"step": "error"}, RenderFailedError must be raised."""
         self._setup_available(renderer, tmp_path)
-        error_line = json.dumps({"step": "error", "message": "arcpy 崩溃了"}) + "\n"
+        error_line = (json.dumps({"step": "error", "message": "arcpy 崩溃了"}) + "\n").encode()
         mock_proc = MagicMock()
         mock_proc.stdout = iter([error_line])
-        mock_proc.stderr = StringIO("")
+        mock_proc.stderr = BytesIO(b"")
         mock_proc.returncode = 1
         mock_proc.wait.return_value = 1
 
@@ -205,8 +205,8 @@ class TestConfigSerialization:
             "message": "完成", "output": str(sample_config.output_path)
         })
         mock_proc = MagicMock()
-        mock_proc.stdout = iter([done_line + "\n"])
-        mock_proc.stderr = StringIO("")
+        mock_proc.stdout = iter([(done_line + "\n").encode("utf-8")])
+        mock_proc.stderr = BytesIO(b"")
         mock_proc.returncode = 0
         mock_proc.wait.return_value = 0
 

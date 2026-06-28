@@ -55,15 +55,16 @@ class ArcGISRenderer(BaseRenderer):
                 [str(propy), "-c",
                  "import arcpy; info=arcpy.GetInstallInfo(); print(info['Version'])"],
                 capture_output=True,
-                text=True,
                 timeout=20,
             )
-            if result.returncode == 0 and result.stdout.strip():
-                version = result.stdout.strip()
+            # Decode with errors="replace" to tolerate GBK output from propy.bat
+            stdout = result.stdout.decode("utf-8", errors="replace").strip()
+            stderr = result.stderr.decode("utf-8", errors="replace").strip()
+            if result.returncode == 0 and stdout:
                 self._propy_path = propy
-                self._arcgis_version = version
-                return True, f"ArcGIS Pro {version}"
-            return False, f"arcpy 不可用: {result.stderr.strip()}"
+                self._arcgis_version = stdout
+                return True, f"ArcGIS Pro {stdout}"
+            return False, f"arcpy 不可用: {stderr}"
         except FileNotFoundError:
             return False, f"未找到 ArcGIS Pro：{propy} 不存在"
         except subprocess.TimeoutExpired:
@@ -116,19 +117,21 @@ class ArcGISRenderer(BaseRenderer):
                 [str(self._propy_path), str(_WORKER_SCRIPT), "--config", config_json],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
-                encoding="utf-8",
+                # Read as bytes; propy.bat may emit GBK-encoded banner/error lines
+                # that would crash a utf-8 text reader.
             )
 
             output_path: Optional[str] = None
-            for raw in process.stdout:  # type: ignore[union-attr]
-                raw = raw.strip()
+            for raw_bytes in process.stdout:  # type: ignore[union-attr]
+                # Decode as UTF-8 (worker JSON lines) and tolerate GBK bytes
+                # from cmd.exe wrappers by replacing undecodable bytes.
+                raw = raw_bytes.decode("utf-8", errors="replace").strip()
                 if not raw:
                     continue
                 try:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    continue  # non-JSON log line, ignore
+                    continue  # non-JSON log line (e.g. propy.bat banner), ignore
 
                 step = msg.get("step", "")
                 pct = int(msg.get("progress", 0))
@@ -147,9 +150,10 @@ class ArcGISRenderer(BaseRenderer):
 
             process.wait(timeout=300)
             if process.returncode != 0:
-                stderr = process.stderr.read() if process.stderr else ""
+                stderr_bytes = process.stderr.read() if process.stderr else b""
+                stderr = stderr_bytes.decode("utf-8", errors="replace")[:300]
                 raise RenderFailedError(
-                    f"ArcGIS 渲染进程退出码 {process.returncode}: {stderr[:200]}"
+                    f"ArcGIS 渲染进程退出码 {process.returncode}: {stderr}"
                 )
 
             if output_path:

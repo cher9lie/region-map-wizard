@@ -19,6 +19,7 @@ IMPORTANT: This script must NOT import any rmw project modules.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import shutil
@@ -58,6 +59,11 @@ def _rect_polygon(x: float, y: float, w: float, h: float):
 # ── Main flow ─────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    # Force stdout to UTF-8 so JSON with Chinese text isn't GBK-encoded by the
+    # Windows console (propy.bat runs in a cmd environment that defaults to CP936).
+    if hasattr(sys.stdout, "buffer"):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
+
     parser = argparse.ArgumentParser(description="ArcGIS Pro map worker")
     parser.add_argument("--config", required=True, help="Path to config JSON file")
     args = parser.parse_args()
@@ -179,16 +185,18 @@ def _render(cfg: dict, arcpy) -> None:
 def _create_layout_from_code(arcpy, work_aprx: str, cfg: dict):
     """Create a three-panel layout entirely in code (no template).
 
-    Requires a blank seed .aprx.  Falls back to CURRENT if none is found.
+    Requires a blank seed .aprx bundled at src/resources/templates/blank_seed.aprx.
+    If that file is absent, raises a clear error pointing to the guide.
     """
-    # Try to find any writable blank .aprx to copy
     seed_aprx = Path(__file__).parent.parent / "resources" / "templates" / "blank_seed.aprx"
-    if seed_aprx.exists():
-        shutil.copy2(str(seed_aprx), work_aprx)
-        aprx = arcpy.mp.ArcGISProject(work_aprx)
-    else:
-        # Last resort: create an in-memory project (ArcGIS Pro 3.x)
-        aprx = arcpy.mp.ArcGISProject("MEMORYLOCATION")
+    if not seed_aprx.exists():
+        raise FileNotFoundError(
+            "缺少 ArcGIS Pro 模板文件。\n"
+            "请按照 docs/arcgis_template_guide.md 的说明创建模板，\n"
+            "将 location_map_template.aprx 放到 src/resources/templates/ 目录后重试。"
+        )
+    shutil.copy2(str(seed_aprx), work_aprx)
+    aprx = arcpy.mp.ArcGISProject(work_aprx)
 
     china_map    = aprx.createMap("China_Map",    "MAP")
     province_map = aprx.createMap("Province_Map", "MAP")

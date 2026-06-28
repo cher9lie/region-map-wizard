@@ -383,6 +383,251 @@ def calc_grid_interval(extent_degrees: float) -> float:
     return 0.1
 ```
 
+### 4.3 ArcGIS Pro 引擎 — 详细设计
+
+#### 4.3.1 环境检测与初始化
+
+```
+检测顺序:
+1. 环境变量 ARCGIS_PRO_PATH (用户自定义)
+2. 注册表 HKLM\SOFTWARE\ESRI\ArcGISPro → InstallDir
+3. 常见安装路径:
+   - C:\Program Files\ArcGIS\Pro
+   - C:\ArcGIS\Pro
+4. propy.bat 路径:
+   - {InstallDir}\bin\Python\scripts\propy.bat
+5. python.exe 路径:
+   - {InstallDir}\bin\Python\envs\arcgispro-py3\python.exe
+
+检测方法: subprocess 调用上述 python.exe 执行:
+  python -c "import arcpy; print(arcpy.GetInstallInfo()['Version'])"
+```
+
+注册表读取示例：
+```python
+import winreg
+key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\ESRI\ArcGISPro')
+install_dir, _ = winreg.QueryValueEx(key, 'InstallDir')
+```
+
+#### 4.3.2 进程模型
+
+主进程（PyQt5 GUI）与 arcpy 工作进程之间的通信协议：
+
+```
+主进程 (PyQt5, 系统 Python)
+  │
+  │  1. 将 RenderConfig 序列化为 JSON 临时文件
+  │  2. 复制模板 .aprx 到临时目录
+  │
+  ├─ subprocess.Popen([propy_bat, "_arcgis_worker.py", "--config", config.json])
+  │     │
+  │     │  _arcgis_worker.py 在 ArcGIS Python 环境中运行:
+  │     │    - 读取 config.json
+  │     │    - 打开模板 .aprx
+  │     │    - 创建/修改地图、布局、数据源
+  │     │    - 导出图片
+  │     │    - 向 stdout 输出 JSON 进度行:
+  │     │      {"step": "loading",  "progress": 10, "message": "加载模板..."}
+  │     │      {"step": "data",     "progress": 30, "message": "加载栅格数据..."}
+  │     │      {"step": "render",   "progress": 70, "message": "渲染排版..."}
+  │     │      {"step": "export",   "progress": 90, "message": "导出 JPG..."}
+  │     │      {"step": "done",     "progress": 100, "output": "C:\\output\\map.jpg"}
+  │     │    - 异常时输出:
+  │     │      {"step": "error", "message": "arcpy 错误详情"}
+  │     │
+  │  3. 主进程逐行读取 stdout，解析 JSON，更新进度条
+  │  4. 子进程结束后，主进程获取输出文件路径
+```
+
+#### 4.3.3 模板 .aprx 设计
+
+两种策略对比：
+
+**策略 A（模板法，推荐）**
+- 预先在 ArcGIS Pro 中手动制作排版模板 `location_map_template.aprx`
+- 包含 3 个 Map：`China_Map` / `Province_Map` / `City_Map`
+- 包含 1 个 Layout `LocationMap`（A4 横版 297×210mm）
+  - 3 个 MapFrame（位置尺寸与第 4.2 节一致）
+  - 预设的指北针、比例尺、图例、标题文本框
+- 脚本运行时：复制模板 → 修改数据源 → 调整范围 → 修改文本 → 导出
+- 优势：排版美观度有保证、代码简单
+- 劣势：模板制作需要 ArcGIS Pro、模板文件约 5–10 MB
+
+**策略 B（全代码创建，ArcGIS Pro ≥ 3.2）**
+- 用 `createLayout` + `createMapFrame` + `createMapSurroundElement` 全部从代码创建
+- 需要通过 CIM Access 修改经纬网间距、字体等细节属性
+- 优势：灵活、无外部模板文件依赖
+- 劣势：代码量大、CIM 操作复杂、样式调整困难
+
+**推荐：混合策略**。优先使用预制模板（策略 A），当模板文件缺失时自动 fallback 到全代码创建（策略 B）。模板文件存放于 `src/resources/templates/location_map_template.aprx`。
+
+> **注意**：arcpy.mp 不能凭空创建 .aprx 项目文件（ESRI 官方限制），策略 B 仍需一个空白"种子" .aprx 文件作为基础。
+
+#### 4.3.4 _arcgis_worker.py 完整流程
+
+```python
+# _arcgis_worker.py — 在 ArcGIS Pro Python 环境中运行
+# 完全独立，不 import 主项目任何模块
+import arcpy, json, sys, os, shutil
+
+def report(step, progress, message, **kwargs):
+    """向 stdout 输出 JSON 进度（flush 确保主进程实时读取）"""
+    print(json.dumps(
+        {"step": step, "progress": progress, "message": message, **kwargs},
+        ensure_ascii=False
+    ), flush=True)
+
+def main(config_path):
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = json.load(f)
+
+    # 1. 复制模板并打开
+    report("loading", 5, "打开 ArcGIS Pro 项目模板...")
+    work_aprx = os.path.join(config['temp_dir'], 'work.aprx')
+    shutil.copy2(config['template_path'], work_aprx)
+    aprx = arcpy.mp.ArcGISProject(work_aprx)
+
+    # 2. 获取地图和布局引用
+    china_map    = aprx.listMaps('China_Map')[0]
+    province_map = aprx.listMaps('Province_Map')[0]
+    city_map     = aprx.listMaps('City_Map')[0]
+    layout       = aprx.listLayouts('LocationMap')[0]
+
+    # 3. 加载矢量边界
+    report("data", 20, "加载行政区边界...")
+    china_map.addDataFromPath(config['country_boundary'])
+    province_map.addDataFromPath(config['province_boundary'])
+    city_map.addDataFromPath(config['city_boundary'])
+
+    # 4. 加载栅格数据
+    if config.get('raster_path'):
+        report("data", 35, "加载栅格数据...")
+        city_map.addDataFromPath(config['raster_path'])
+
+    # 5. 符号化
+    report("symbolize", 45, "设置符号化...")
+    for lyr in city_map.listLayers():
+        if lyr.isRasterLayer:
+            sym = lyr.symbology
+            if config['data_type'] == 'dem':
+                sym.updateColorizer('RasterClassifyColorizer')
+                # 从 config['color_ramp'] 设置分类色带
+            elif config['data_type'] == 'hillshade':
+                sym.updateColorizer('RasterStretchColorizer')
+            elif config['data_type'] == 'sentinel2':
+                sym.updateColorizer('RasterRGBColorizer')
+            lyr.symbology = sym
+
+    # 6. 设置各地图框范围
+    report("extent", 60, "设置地图范围...")
+    city_mf = layout.listElements('MapFrame_Element', 'City_MapFrame')[0]
+    city_lyr = city_map.listLayers(config['city_name'])[0]
+    ext = city_mf.getLayerExtent(city_lyr, False, True)
+    city_mf.camera.setExtent(ext)
+    city_mf.camera.scale *= 1.1  # 留边距
+
+    # 7. 更新文本元素
+    report("text", 70, "更新标注...")
+    title = layout.listElements('TEXT_ELEMENT', 'Title')[0]
+    title.text = f"{config['province_name']}{config['city_name']}研究区区位图"
+
+    # 8. 经纬网格（通过 CIM 修改间距）
+    report("grid", 80, "设置经纬网...")
+    # 见 4.3.5 节 CIM Access 示例
+
+    # 9. 保存工程副本（供用户后续在 ArcGIS Pro 中编辑）
+    report("save", 85, "保存 ArcGIS Pro 工程...")
+    output_aprx = os.path.join(
+        config['output_dir'],
+        f"{config['province_name']}_{config['city_name']}_区位图.aprx"
+    )
+    aprx.saveACopy(output_aprx)
+
+    # 10. 导出图片
+    report("export", 90, "导出图片...")
+    output_path = os.path.join(
+        config['output_dir'],
+        f"{config['province_name']}_{config['city_name']}_区位图.{config['format']}"
+    )
+    fmt_map = {'pdf': 'PDF', 'jpg': 'JPEG', 'jpeg': 'JPEG',
+               'png': 'PNG', 'tif': 'TIFF', 'tiff': 'TIFF'}
+    fmt_key = fmt_map.get(config['format'].lower(), 'JPEG')
+    fmt = arcpy.mp.CreateExportFormat(fmt_key, output_path)
+    fmt.resolution = config.get('dpi', 300)
+    layout.export(fmt)
+
+    report("done", 100, "完成", output=output_path, project=output_aprx)
+    del aprx  # 释放文件锁
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', required=True)
+    args = parser.parse_args()
+    try:
+        main(args.config)
+    except Exception as e:
+        print(json.dumps({"step": "error", "message": str(e)},
+                         ensure_ascii=False), flush=True)
+        sys.exit(1)
+```
+
+#### 4.3.5 arcpy 符号化 API 参考
+
+| 操作 | API | 说明 |
+|------|-----|------|
+| DEM 分层设色 | `sym.updateColorizer('RasterClassifyColorizer')` | 设置 classBreaks 和色带 |
+| DEM 拉伸渲染 | `sym.updateColorizer('RasterStretchColorizer')` | 单波段拉伸（山体阴影用灰度） |
+| RGB 真彩色 | `sym.updateColorizer('RasterRGBColorizer')` | Sentinel-2 B4/B3/B2 |
+| 矢量填充色 | `lyr.symbology.renderer.symbol.color` | 修改面填充颜色 |
+| 矢量边框 | `lyr.symbology.renderer.symbol.outlineColor` | 修改边框颜色和宽度 |
+| 图层透明度 | `lyr.transparency = 50` | 0–100，数值越大越透明 |
+| 定义查询 | `lyr.definitionQuery = "adcode = '130000'"` | 仅显示特定要素 |
+
+对于 arcpy.mp API 未暴露的属性（如经纬网间距、字体大小），使用 Python CIM Access：
+
+```python
+lyt_cim = layout.getDefinition('V3')
+for elm in lyt_cim.elements:
+    if elm.name == 'City_MapFrame':
+        for grid in elm.grids:
+            grid.gridLineOrigin.x = 0.5  # 经度间隔（度）
+            grid.gridLineOrigin.y = 0.5  # 纬度间隔（度）
+layout.setDefinition(lyt_cim)
+```
+
+#### 4.3.6 导出格式与参数
+
+ArcGIS Pro 3.4+ 使用 `CreateExportFormat` + `layout.export(fmt)`：
+
+| 格式 | CreateExportFormat 参数 | 关键属性 |
+|------|------------------------|---------|
+| PDF  | `'PDF'`  | `resolution`, `embedFonts=True`, `imageCompressionQuality`, `georefInfo` |
+| JPEG | `'JPEG'` | `resolution`, `jpegQuality`（0–100） |
+| PNG  | `'PNG'`  | `resolution` |
+| TIFF | `'TIFF'` | `resolution`, `geoTiffTags=True` |
+| SVG  | `'SVG'`  | `resolution`, `compressVectorGraphics` |
+| BMP  | `'BMP'`  | `resolution` |
+
+> ArcGIS Pro < 3.4 使用旧方法：`layout.exportToPDF()` / `layout.exportToJPEG()` 等。
+
+#### 4.3.7 ArcGIS 引擎优势与限制
+
+**优势**
+- 出图质量是三个引擎中最高的（ArcGIS Pro 渲染引擎成熟度最高）
+- 丰富的内置样式库（North Arrow、Scale Bar 各有数十种预设）
+- 输出可编辑的 .aprx 项目文件，用户可继续在 ArcGIS Pro 中微调
+- CIM Access 提供了极深度的自定义能力
+- `export()` 方法支持 11 种格式（PDF / JPEG / PNG / BMP / TIFF / SVG / EPS / EMF / GIF / AIX）
+
+**限制**
+- 用户必须安装 ArcGIS Pro（商业软件，需授权）
+- arcpy 只能在 ArcGIS Pro 的 conda 环境中运行，不能安装到系统 Python
+- 通过 subprocess 调用，主进程无法直接 `import arcpy`
+- 不能凭空创建 .aprx，需要预制模板文件（或空白种子文件）
+- Windows 独占（ArcGIS Pro 不支持 macOS/Linux）
+
 ---
 
 ## 5. GUI 规格

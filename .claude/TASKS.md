@@ -399,36 +399,133 @@ Cartopy 引擎的特殊处理:
 ## 任务 8: ArcGIS Pro 渲染引擎
 
 ```
-实现 src/renderers/arcgis_renderer.py 和 src/renderers/_arcgis_worker.py:
+阅读 docs/SPEC.md 第 4.3 节（ArcGIS Pro 引擎详细设计），然后完成以下四个子任务。
 
-ArcGIS Pro 模式通过 subprocess 调用 ArcGIS 的 Python 环境。
+### 8.1 实现 src/renderers/arcgis_renderer.py
 
-arcgis_renderer.py:
 class ArcGISRenderer(BaseRenderer):
+
+    def __init__(self):
+        self._propy_path = None
+        self._arcgis_version = None
+
     def check_available(self) -> tuple[bool, str]:
-        """通过 subprocess 检测 arcpy 可用性
-        调用 ArcGIS Pro 的 python.exe 执行:
-        python -c "import arcpy; print(arcpy.GetInstallInfo()['Version'])"
-        """
-    
-    def render(self, config: RenderConfig, progress_callback=None) -> Path:
-        """
-        1. 将 config 序列化为 JSON 临时文件
-        2. subprocess.Popen 调用 _arcgis_worker.py
-        3. 读取 stdout 获取进度
-        4. 等待完成，返回输出路径
+        """检测 ArcGIS Pro 是否可用
+
+        检测顺序:
+        1. 检查 self._propy_path 缓存
+        2. 读注册表 HKLM\SOFTWARE\ESRI\ArcGISPro\InstallDir
+        3. 尝试常见路径: C:\Program Files\ArcGIS\Pro
+        4. 找到后验证: subprocess 调用 propy.bat 执行
+           python -c "import arcpy; print(arcpy.GetInstallInfo()['Version'])"
+        5. 返回 (True, "ArcGIS Pro {version}") 或 (False, "未找到 ArcGIS Pro")
+
+        Windows 注册表读取:
+          import winreg
+          key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\ESRI\ArcGISPro')
+          install_dir, _ = winreg.QueryValueEx(key, 'InstallDir')
         """
 
-_arcgis_worker.py (独立脚本，在 ArcGIS Python 环境中运行):
-    """
-    1. 读取 config JSON
-    2. 创建 ArcGISProject
-    3. aprx.createLayout() 创建布局
-    4. layout.createMapFrame() 创建三个地图框
-    5. 加载图层、设置符号化
-    6. layout.exportToJPEG / exportToPDF
-    7. 向 stdout 打印进度 JSON: {"progress": 50, "message": "渲染中..."}
-    """
+    def _find_propy(self) -> Optional[Path]:
+        """查找 propy.bat 路径，按 SPEC 4.3.1 节顺序检测"""
+
+    def render(self, config: RenderConfig, progress_callback=None) -> Path:
+        """通过 subprocess 调用 _arcgis_worker.py
+
+        流程:
+        1. 验证 propy.bat 可用（_find_propy）
+        2. 将 config 序列化为 JSON 临时文件
+           (Path 对象转为字符串，确保 Windows 路径正确)
+           JSON 中额外包含:
+             template_path: src/resources/templates/location_map_template.aprx 路径
+             temp_dir:      系统临时目录
+             output_dir:    config.output_path 的父目录
+        3. subprocess.Popen(
+               [str(propy_path), worker_script, '--config', config_json],
+               stdout=subprocess.PIPE,
+               stderr=subprocess.PIPE,
+               text=True, encoding='utf-8'
+           )
+        4. 逐行读取 stdout，解析 JSON:
+             {"step": "loading",  "progress": 10,  "message": "..."}  → progress_callback
+             {"step": "done",     "progress": 100, "output": "..."}   → return Path(output)
+             {"step": "error",    "message": "..."}                   → raise RenderFailedError
+        5. 检查 returncode，非零则读 stderr 并抛出异常
+        """
+
+    def get_project_path(self) -> Optional[Path]:
+        """返回最近一次渲染输出的 .aprx 文件路径"""
+
+
+### 8.2 实现 src/renderers/_arcgis_worker.py
+
+这个脚本在 ArcGIS Pro 的 Python 环境中独立运行，不导入主项目的任何模块。
+与主进程通过 stdout JSON 行协议通信（见 SPEC 4.3.2 节）。
+
+完整实现 SPEC 4.3.4 节的流程，关键要点:
+
+1. 必须 import arcpy（只在 ArcGIS conda 环境中可用）
+2. 所有进度通过 print(json.dumps(...), flush=True) 输出
+3. 模板法（优先）: 打开预制 .aprx → 修改数据 → 导出
+4. 全代码法（fallback，当 template_path 文件不存在时）:
+   - 需要一个空白"种子" .aprx（可以打包一个极简空白模板）
+   - aprx.createMap() × 3（China_Map / Province_Map / City_Map）
+   - aprx.createLayout(297, 210, 'MILLIMETER')
+   - layout.createMapFrame() × 3（用 arcpy.Polygon 定义精确位置，与 SPEC 4.2 节一致）
+   - layout.createMapSurroundElement() 添加指北针、比例尺
+   - aprx.createTextElement() 添加标题
+5. 符号化（见 SPEC 4.3.5 节）:
+   - DEM:        updateColorizer('RasterClassifyColorizer')
+   - Hillshade:  updateColorizer('RasterStretchColorizer'), 灰度
+   - Sentinel-2: updateColorizer('RasterRGBColorizer'), bands=[B4,B3,B2]
+   - 行政区高亮: symbol.color + symbol.outlineColor
+6. CIM Access 修改经纬网间距（见 SPEC 4.3.5 节示例）
+7. 导出: arcpy.mp.CreateExportFormat() + layout.export()（见 SPEC 4.3.6 节）
+8. 所有异常 try-except，通过 {"step": "error", "message": ...} 报告
+9. 脚本末尾 del aprx 释放文件锁
+
+
+### 8.3 创建 docs/arcgis_template_guide.md
+
+内容包括:
+- 如何在 ArcGIS Pro 中制作 location_map_template.aprx 模板（步骤截图说明）
+- 模板中 Map 和 Layout 元素的命名规范（名称必须与 worker 脚本一致）:
+    Maps:      China_Map, Province_Map, City_Map
+    Layout:    LocationMap
+    MapFrames: China_MapFrame, Province_MapFrame, City_MapFrame
+    Text:      Title, Subtitle, DataSource
+- 各 MapFrame 的精确位置和尺寸（与 SPEC 4.2 节一致，单位 mm）
+- 模板制作完成后放置于 src/resources/templates/location_map_template.aprx
+- 提供 fallback 空白种子 .aprx 的制作说明
+
+
+### 8.4 编写测试 tests/test_arcgis_renderer.py
+
+所有测试不依赖 ArcGIS Pro 安装，全部用 mock:
+
+- test_check_available_no_arcgis:
+    mock subprocess 返回 FileNotFoundError
+    断言返回 (False, ...) 且 reason 中含"未找到"字样
+
+- test_check_available_with_arcgis:
+    mock subprocess stdout 返回 "3.4.0"
+    断言返回 (True, "ArcGIS Pro 3.4.0")
+
+- test_render_calls_subprocess:
+    mock Popen，mock stdout 输出 done JSON
+    断言 Popen 被调用，传入的参数包含 propy_bat 路径和 worker 脚本路径
+
+- test_render_parses_progress:
+    mock stdout 输出多行 JSON（loading/data/render/export/done）
+    断言 progress_callback 被正确调用，次数和参数与 JSON 一致
+
+- test_render_handles_error:
+    mock stdout 输出 {"step": "error", "message": "arcpy 崩溃"}
+    断言抛出 RenderFailedError，错误信息包含"arcpy 崩溃"
+
+- test_config_serialization:
+    构造一个含 Path 对象的 RenderConfig
+    验证序列化后 JSON 可正常 json.loads()，且 Path 已转为字符串
 ```
 
 ---

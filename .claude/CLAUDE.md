@@ -46,6 +46,18 @@
 - QGIS 安装路径通过 `QgsApplication.setPrefixPath()` 设置
 - Windows 上需要正确设置 PATH 和 PYTHONPATH 指向 OSGeo4W
 
+### ArcGIS Pro (arcpy) 注意事项
+- arcpy 不能安装到系统 Python，只存在于 ArcGIS Pro 的 conda 环境中
+- 所有 arcpy 代码必须放在 `src/renderers/_arcgis_worker.py` 中，通过 subprocess 调用
+- 主项目代码（gui/, core/, renderers/arcgis_renderer.py）绝不能 `import arcpy`
+- `_arcgis_worker.py` 是完全独立的脚本，不导入主项目的任何模块
+- 与主进程通过 stdout JSON 行协议通信（每行一个 JSON 对象，`flush=True`）
+- 调用入口是 `propy.bat`，不是直接调用 `python.exe`
+- 不能凭空创建 `.aprx`，预制模板放在 `src/resources/templates/`
+- 测试用 mock subprocess，不依赖 ArcGIS Pro 安装
+- ArcGIS Pro 3.4+ 使用 `CreateExportFormat()` + `layout.export()` 替代旧的 `exportToPDF()` 等方法
+- 独立脚本不可使用 `openView()`、`closeViews()`、`'CURRENT'` 关键字（仅 GUI 内可用）
+
 ### 测试
 - 测试文件放在 `tests/`
 - 用 pytest

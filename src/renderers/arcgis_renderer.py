@@ -1,54 +1,87 @@
-"""ArcGIS Pro rendering engine — calls arcpy via a subprocess worker script."""
+"""ArcGIS Pro rendering engine — calls arcpy via a subprocess worker script.
+
+All arcpy code lives in _arcgis_worker.py, which runs inside the ArcGIS Pro
+conda environment.  This module never imports arcpy directly.
+"""
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Optional
 
-from src.renderers.base import BaseRenderer, RenderConfig
 from src.core.exceptions import RenderFailedError, RendererNotAvailableError
+from src.renderers.base import BaseRenderer, RenderConfig
 
 _WORKER_SCRIPT = Path(__file__).parent / "_arcgis_worker.py"
+_TEMPLATE_APRX = Path(__file__).parent.parent / "resources" / "templates" / "location_map_template.aprx"
 
-# Common ArcGIS Pro Python executable locations
-_ARCGIS_PYTHON_CANDIDATES = [
-    r"C:\Program Files\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe",
-    r"C:\Program Files (x86)\ArcGIS\Pro\bin\Python\envs\arcgispro-py3\python.exe",
+# Candidate propy.bat paths (checked in order when registry lookup fails)
+_PROPY_CANDIDATES: list[str] = [
+    r"C:\Program Files\ArcGIS\Pro\bin\Python\scripts\propy.bat",
+    r"C:\Program Files (x86)\ArcGIS\Pro\bin\Python\scripts\propy.bat",
+    r"C:\ArcGIS\Pro\bin\Python\scripts\propy.bat",
 ]
 
 
 class ArcGISRenderer(BaseRenderer):
-    """Render location maps using ArcGIS Pro (arcpy) via subprocess."""
+    """Render location maps using ArcGIS Pro (arcpy) via a subprocess worker."""
 
     def __init__(self) -> None:
-        self._python_exe: Optional[Path] = None
+        self._propy_path: Optional[Path] = None
+        self._arcgis_version: Optional[str] = None
+        self._last_project_path: Optional[Path] = None
+
+    # ── Public API ────────────────────────────────────────────────────────────
 
     def check_available(self) -> tuple[bool, str]:
-        exe = self._find_arcgis_python()
-        if exe is None:
-            return False, "未检测到 ArcGIS Pro Python 环境"
+        """Detect ArcGIS Pro availability.
+
+        Detection order (per SPEC §4.3.1):
+          1. Cached self._propy_path
+          2. ARCGIS_PRO_PATH env var
+          3. Windows registry HKLM\\SOFTWARE\\ESRI\\ArcGISPro → InstallDir
+          4. Common installation paths
+          5. Verify by running: arcpy.GetInstallInfo()['Version']
+        """
+        propy = self._find_propy()
+        if propy is None:
+            return False, "未找到 ArcGIS Pro 安装（propy.bat 不存在）"
         try:
             result = subprocess.run(
-                [str(exe), "-c",
+                [str(propy), "-c",
                  "import arcpy; info=arcpy.GetInstallInfo(); print(info['Version'])"],
-                capture_output=True, text=True, timeout=15,
+                capture_output=True,
+                text=True,
+                timeout=20,
             )
             if result.returncode == 0 and result.stdout.strip():
                 version = result.stdout.strip()
-                self._python_exe = exe
+                self._propy_path = propy
+                self._arcgis_version = version
                 return True, f"ArcGIS Pro {version}"
             return False, f"arcpy 不可用: {result.stderr.strip()}"
+        except FileNotFoundError:
+            return False, f"未找到 ArcGIS Pro：{propy} 不存在"
+        except subprocess.TimeoutExpired:
+            return False, "ArcGIS Pro 检测超时"
         except Exception as exc:
             return False, str(exc)
 
     def get_project_path(self) -> Optional[Path]:
-        return None
+        """Return the .aprx saved during the last render(), or None."""
+        return self._last_project_path
 
     def render(self, config: RenderConfig, progress_callback=None) -> Path:
+        """Render via subprocess.
+
+        Serialises config to a temporary JSON file, launches _arcgis_worker.py
+        through propy.bat, reads stdout JSON lines for progress, and returns
+        the output image path when done.
+        """
         available, reason = self.check_available()
         if not available:
             raise RendererNotAvailableError("ArcGIS Pro", reason)
@@ -57,50 +90,70 @@ class ArcGISRenderer(BaseRenderer):
             if progress_callback:
                 progress_callback(pct, msg)
 
-        # Serialise config to a temp JSON file
+        # Build config dict: convert Path objects to strings
+        config_data: dict = {}
+        for k, v in vars(config).items():
+            if k.startswith("_"):
+                continue
+            config_data[k] = str(v) if isinstance(v, Path) else v
+
+        # Add worker-specific fields
+        config_data["template_path"] = str(_TEMPLATE_APRX)
+        config_data["temp_dir"] = tempfile.gettempdir()
+        config_data["output_dir"] = str(Path(config.output_path).parent)
+
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False, encoding="utf-8"
-        ) as f:
-            config_data = {
-                k: str(v) if isinstance(v, Path) else v
-                for k, v in vars(config).items()
-                if not k.startswith("_")
-            }
-            json.dump(config_data, f, ensure_ascii=False, indent=2)
-            config_path = f.name
+        ) as tmp:
+            json.dump(config_data, tmp, ensure_ascii=False, indent=2)
+            config_json = tmp.name
+
+        self._last_project_path = None
 
         try:
             _p(0, "启动 ArcGIS Pro 渲染进程...")
             process = subprocess.Popen(
-                [str(self._python_exe), str(_WORKER_SCRIPT), config_path],
+                [str(self._propy_path), str(_WORKER_SCRIPT), "--config", config_json],
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                stderr=subprocess.PIPE,
                 text=True,
                 encoding="utf-8",
             )
 
-            last_output_path: Optional[str] = None
-            for line in process.stdout:  # type: ignore[union-attr]
-                line = line.strip()
-                if not line:
+            output_path: Optional[str] = None
+            for raw in process.stdout:  # type: ignore[union-attr]
+                raw = raw.strip()
+                if not raw:
                     continue
                 try:
-                    msg = json.loads(line)
-                    pct = msg.get("progress", 0)
-                    text = msg.get("message", "")
-                    output_p = msg.get("output_path")
-                    _p(pct, text)
-                    if output_p:
-                        last_output_path = output_p
+                    msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    pass  # non-JSON log line
+                    continue  # non-JSON log line, ignore
+
+                step = msg.get("step", "")
+                pct = int(msg.get("progress", 0))
+                text = msg.get("message", "")
+
+                if step == "error":
+                    raise RenderFailedError(text or "ArcGIS 渲染失败")
+                if step == "done":
+                    output_path = msg.get("output")
+                    project_p = msg.get("project")
+                    if project_p:
+                        self._last_project_path = Path(project_p)
+                    _p(100, text or "完成")
+                    break
+                _p(pct, text)
 
             process.wait(timeout=300)
             if process.returncode != 0:
-                raise RenderFailedError(f"ArcGIS 渲染进程退出码 {process.returncode}")
+                stderr = process.stderr.read() if process.stderr else ""
+                raise RenderFailedError(
+                    f"ArcGIS 渲染进程退出码 {process.returncode}: {stderr[:200]}"
+                )
 
-            if last_output_path:
-                return Path(last_output_path)
+            if output_path:
+                return Path(output_path)
             return Path(config.output_path)
 
         except (RenderFailedError, RendererNotAvailableError):
@@ -108,21 +161,49 @@ class ArcGISRenderer(BaseRenderer):
         except Exception as exc:
             raise RenderFailedError(str(exc)) from exc
         finally:
-            Path(config_path).unlink(missing_ok=True)
+            Path(config_json).unlink(missing_ok=True)
 
     # ── Private ───────────────────────────────────────────────────────────────
 
-    def _find_arcgis_python(self) -> Optional[Path]:
-        if self._python_exe and self._python_exe.exists():
-            return self._python_exe
+    def _find_propy(self) -> Optional[Path]:
+        """Locate propy.bat following SPEC §4.3.1 detection order."""
+        # 1. Cached result
+        if self._propy_path and self._propy_path.exists():
+            return self._propy_path
 
-        # 1. User-configured path
-        # (would be read from ConfigManager in the real pipeline)
+        # 2. Environment variable
+        env_path = os.environ.get("ARCGIS_PRO_PATH")
+        if env_path:
+            candidate = Path(env_path) / "bin" / "Python" / "scripts" / "propy.bat"
+            if candidate.exists():
+                return candidate
 
-        # 2. Well-known locations
-        for candidate in _ARCGIS_PYTHON_CANDIDATES:
-            p = Path(candidate)
+        # 3. Windows registry
+        install_dir = _read_arcgis_registry()
+        if install_dir:
+            candidate = Path(install_dir) / "bin" / "Python" / "scripts" / "propy.bat"
+            if candidate.exists():
+                return candidate
+
+        # 4. Common installation paths
+        for path_str in _PROPY_CANDIDATES:
+            p = Path(path_str)
             if p.exists():
                 return p
 
+        return None
+
+
+def _read_arcgis_registry() -> Optional[str]:
+    """Read ArcGIS Pro InstallDir from the Windows registry."""
+    try:
+        import winreg
+        key = winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            r"SOFTWARE\ESRI\ArcGISPro",
+        )
+        install_dir, _ = winreg.QueryValueEx(key, "InstallDir")
+        winreg.CloseKey(key)
+        return install_dir
+    except Exception:
         return None

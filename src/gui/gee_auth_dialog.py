@@ -4,12 +4,11 @@ from __future__ import annotations
 
 try:
     from PyQt5.QtWidgets import (
-        QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-        QLabel, QComboBox, QPushButton, QFrame,
+        QDialog, QVBoxLayout, QHBoxLayout,
+        QLabel, QComboBox, QPushButton,
         QSizePolicy, QWidget,
     )
     from PyQt5.QtCore import Qt, QThread, pyqtSignal
-    from PyQt5.QtGui import QFont
     _QT_AVAILABLE = True
 except ImportError:
     _QT_AVAILABLE = False
@@ -93,14 +92,10 @@ if _QT_AVAILABLE:
             )
             layout.addWidget(dlg_title)
 
-            # ── Step 1 card ────────────────────────────────────────────────────
-            step1_card = QFrame()
-            step1_card.setStyleSheet(
-                "QFrame { border: 1px solid #e8e8e8; border-radius: 8px;"
-                " background: #fafafa; padding: 0; }"
-            )
+            # ── Step 1 ─────────────────────────────────────────────────────────
+            step1_card = QWidget()
             s1 = QVBoxLayout(step1_card)
-            s1.setContentsMargins(14, 12, 14, 12)
+            s1.setContentsMargins(0, 0, 0, 0)
             s1.setSpacing(8)
 
             s1_header = QHBoxLayout()
@@ -112,21 +107,21 @@ if _QT_AVAILABLE:
             step1_badge.setFixedSize(28, 20)
             step1_badge.setAlignment(Qt.AlignCenter)
             step1_title = QLabel("登录 Google 账号")
-            step1_title.setStyleSheet("font-size: 13px; font-weight: 600; color: #1e1e1e; border: none; background: transparent;")
+            step1_title.setStyleSheet("font-size: 13px; font-weight: 600; color: #1e1e1e;")
             s1_header.addWidget(step1_badge)
             s1_header.addSpacing(8)
             s1_header.addWidget(step1_title)
             s1_header.addStretch()
             self._login_status = QLabel("")
             self._login_status.setStyleSheet(
-                "color: #107c10; font-size: 11px; font-weight: 600; border: none; background: transparent;"
+                "color: #107c10; font-size: 11px; font-weight: 600;"
             )
             s1_header.addWidget(self._login_status)
             s1.addLayout(s1_header)
 
             tip = QLabel("点击按钮将在浏览器中打开 Google 授权页面，完成授权后返回此窗口。")
             tip.setWordWrap(True)
-            tip.setStyleSheet("color: #888888; font-size: 11px; border: none; background: transparent;")
+            tip.setStyleSheet("color: #888888; font-size: 11px;")
             s1.addWidget(tip)
 
             self._login_btn = QPushButton("在浏览器中登录")
@@ -138,14 +133,16 @@ if _QT_AVAILABLE:
 
             layout.addWidget(step1_card)
 
-            # ── Step 2 card ────────────────────────────────────────────────────
-            self._step2_card = QFrame()
-            self._step2_card.setStyleSheet(
-                "QFrame { border: 1px solid #e8e8e8; border-radius: 8px;"
-                " background: #fafafa; padding: 0; }"
-            )
+            # ── Step 1/2 separator ─────────────────────────────────────────────
+            sep1 = QWidget()
+            sep1.setFixedHeight(1)
+            sep1.setStyleSheet("background: #eeeeee;")
+            layout.addWidget(sep1)
+
+            # ── Step 2 ─────────────────────────────────────────────────────────
+            self._step2_card = QWidget()
             s2 = QVBoxLayout(self._step2_card)
-            s2.setContentsMargins(14, 12, 14, 12)
+            s2.setContentsMargins(0, 0, 0, 0)
             s2.setSpacing(8)
 
             s2_header = QHBoxLayout()
@@ -157,7 +154,7 @@ if _QT_AVAILABLE:
             step2_badge.setFixedSize(28, 20)
             step2_badge.setAlignment(Qt.AlignCenter)
             step2_title = QLabel("选择 Cloud 项目")
-            step2_title.setStyleSheet("font-size: 13px; font-weight: 600; color: #1e1e1e; border: none; background: transparent;")
+            step2_title.setStyleSheet("font-size: 13px; font-weight: 600; color: #1e1e1e;")
             s2_header.addWidget(step2_badge)
             s2_header.addSpacing(8)
             s2_header.addWidget(step2_title)
@@ -178,7 +175,7 @@ if _QT_AVAILABLE:
             self._proj_hint = QLabel("")
             self._proj_hint.setWordWrap(True)
             self._proj_hint.setStyleSheet(
-                "color: #aaaaaa; font-size: 10px; border: none; background: transparent;"
+                "color: #aaaaaa; font-size: 10px;"
             )
             s2.addWidget(self._proj_hint)
 

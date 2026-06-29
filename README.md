@@ -22,6 +22,7 @@
 - **自定义研究区**：除了中国省市选择，还可上传自定义 SHP 文件（跨省大区域自动切换两图模式）
 - **智能缓存**：已下载的 GEE 数据自动缓存，不重复下载
 - **独立可执行文件**：支持 PyInstaller 打包为无需安装 Python 的单目录 exe
+- **精心设计的 UI**：遵循 Windows 11 Fluent Design 设计规范，扁平化侧边栏，控件精确对齐
 
 ## 快速开始
 
@@ -69,17 +70,19 @@ pyinstaller --clean --noconfirm rmw.spec
 
 ### 已完成
 
-- [x] PyQt5 GUI 框架（主窗口、GEE 认证对话框、自定义 SHP 导入对话框）
+- [x] **PyQt5 GUI 框架**（主窗口、GEE 认证对话框、自定义 SHP 导入对话框）
+  - [x] Windows 11 Fluent Design 风格扁平化侧边栏，无卡片边框
+  - [x] 三组表单控件（研究区 / 数据选项 / 渲染与输出）精确对齐，标签列宽统一
+  - [x] 后台引擎探测线程（启动时并行检测三种渲染引擎可用性，不阻塞 GUI）
 - [x] Google Earth Engine 数据获取（DEM / 山体阴影 / Sentinel-2）
 - [x] 行政边界数据管理（`china_admin.gpkg`，国/省/市三图层）
 - [x] **Cartopy 渲染引擎**（当前主力引擎）
   - [x] A4 横版三面板布局（中国全图 / 省级图 / 研究区详图）
   - [x] 精确缩放连接线（从实际渲染坐标轴边界出发，解决 cartopy aspect 收缩问题）
-  - [x] 学术斑马边框、经纬网、比例尺、指北针
+  - [x] 学术斑马边框、经纬网（纬度标注置于详图右侧，避免与左侧面板重叠）、比例尺、指北针
   - [x] 大范围自定义 SHP 自动切换两图模式（跳过省级面板）
   - [x] 自定义 SHP 支持中文路径、完整格式校验（缺文件 / 非面 / 无坐标系 等类型化异常）
   - [x] Lambert 等角圆锥投影中国全图 + 适当 extent 配置
-- [x] 后台引擎探测线程（避免启动时 GUI 阻塞）
 - [x] PyInstaller 独立 exe 打包（含 GDAL/GEOS/PROJ DLL 自动注册）
 - [x] **ArcGIS Pro 渲染引擎**（架构实现完成，待 ArcGIS Pro 环境联调）
   - [x] 注册表自动检测 + propy.bat 环境发现
@@ -106,6 +109,7 @@ pyinstaller --clean --noconfirm rmw.spec
 - [x] `_qgis_worker.py`：QgsApplication 独立模式 + QgsPrintLayout 三图框 + QgsLayoutExporter
 - [x] 注册表 + 常见路径自动检测 `python-qgis.bat`（OSGeo4W / 独立安装版，QGIS 3.28–3.40）
 - [x] JSON 行协议进度通信（stdout UTF-8 强制编码，解决 GBK 乱码）
+- [x] stderr 后台线程排空（防止 65 KB 管道缓冲区死锁）
 - [x] mock 测试，不依赖 QGIS 安装（9 个测试全部通过）
 - [ ] QGIS 实机测试与细节调整
 - [ ] 提供 QGIS 插件形式的分发包（`.zip` 插件格式）

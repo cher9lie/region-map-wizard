@@ -433,7 +433,8 @@ class CartopyRenderer(BaseRenderer):
                 x_inline=False, y_inline=False,
             )
             gl.top_labels = False
-            gl.right_labels = False
+            gl.left_labels = False
+            gl.right_labels = True
             gl.xlocator = mticker.MultipleLocator(interval)
             gl.ylocator = mticker.MultipleLocator(interval)
             gl.xlabel_style = {"size": 7, "fontname": "Times New Roman"}

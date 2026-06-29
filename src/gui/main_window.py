@@ -59,32 +59,32 @@ QWidget#divider {
     background: #eeeeee;
 }
 
-/* ── Section cards ────────────────────────────────────────────────────────── */
+/* ── Section headers (flat, Windows 11 style) ─────────────────────────────── */
 QGroupBox {
-    background: #ffffff;
-    border: 1px solid #ebebeb;
-    border-radius: 8px;
+    background: transparent;
+    border: none;
+    border-top: 1px solid #eeeeee;
     margin-top: 18px;
-    padding: 10px 10px 8px 10px;
+    padding: 8px 0px 2px 0px;
     font-size: 10px;
     font-weight: 700;
-    color: #999999;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
+    color: #aaaaaa;
+    letter-spacing: 0.5px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 1px 6px;
-    left: 10px;
-    background: #ffffff;
+    padding: 0px 0px;
+    left: 0px;
+    background: transparent;
 }
 
 /* ── Form row labels ──────────────────────────────────────────────────────── */
 QLabel#formLabel {
     color: #555555;
     font-size: 12px;
-    min-width: 52px;
+    min-width: 62px;
+    max-width: 62px;
 }
 
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
@@ -243,8 +243,8 @@ QTextEdit#logPanel {
 /* ── Preview card ─────────────────────────────────────────────────────────── */
 QFrame#previewCard {
     background: #ffffff;
-    border: 1px solid #ebebeb;
-    border-radius: 8px;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
 }
 
 /* ── Scrollbars ───────────────────────────────────────────────────────────── */
@@ -281,11 +281,7 @@ QStatusBar::item { border: none; }
 
 /* ── Dialogs ──────────────────────────────────────────────────────────────── */
 QDialog { background: #ffffff; }
-QDialog QFrame {
-    border: 1px solid #ebebeb;
-    border-radius: 7px;
-    background: #fafafa;
-}
+QDialog QFrame { border: none; background: transparent; }
 QDialog QLabel { font-size: 12px; color: #333333; }
 QMessageBox { background: #ffffff; }
 QMessageBox QPushButton { min-width: 72px; }
@@ -321,6 +317,13 @@ if _QT_AVAILABLE:
             self._load_saved_state()
 
         # ── UI construction ────────────────────────────────────────────────────
+
+        @staticmethod
+        def _fl(text: str) -> "QLabel":
+            """Form-row label with consistent fixed width for column alignment."""
+            lbl = QLabel(text)
+            lbl.setObjectName("formLabel")
+            return lbl
 
         def _build_ui(self) -> None:
             central = QWidget()
@@ -365,10 +368,10 @@ if _QT_AVAILABLE:
 
             self._province_combo = QComboBox()
             self._province_combo.currentIndexChanged.connect(self._on_province_changed)
-            area_form.addRow("省份", self._province_combo)
+            area_form.addRow(self._fl("省份"), self._province_combo)
 
             self._city_combo = QComboBox()
-            area_form.addRow("城市", self._city_combo)
+            area_form.addRow(self._fl("城市"), self._city_combo)
 
             shp_row = QHBoxLayout()
             shp_row.setSpacing(6)
@@ -382,7 +385,7 @@ if _QT_AVAILABLE:
             shp_btn.clicked.connect(self._import_shp)
             shp_row.addWidget(self._shp_label, 1)
             shp_row.addWidget(shp_btn)
-            area_form.addRow("自定义", shp_row)
+            area_form.addRow(self._fl("自定义"), shp_row)
             sb.addWidget(area_group)
             sb.addSpacing(6)
 
@@ -396,26 +399,26 @@ if _QT_AVAILABLE:
 
             self._data_type_combo = QComboBox()
             self._data_type_combo.addItems(["仅矢量", "DEM 高程", "山体阴影", "Sentinel-2 真彩色"])
-            data_form.addRow("数据类型", self._data_type_combo)
+            data_form.addRow(self._fl("数据类型"), self._data_type_combo)
 
             self._color_ramp_combo = QComboBox()
             self._color_ramp_combo.addItems(["dem_hypsometric", "dem_green_brown"])
-            data_form.addRow("色带", self._color_ramp_combo)
+            data_form.addRow(self._fl("色带"), self._color_ramp_combo)
 
             self._basemap_combo = QComboBox()
             from src.renderers.cartopy_renderer import BASEMAP_REGISTRY
             for key, meta in BASEMAP_REGISTRY.items():
                 self._basemap_combo.addItem(meta["label_zh"], userData=key)
-            data_form.addRow("底图", self._basemap_combo)
+            data_form.addRow(self._fl("底图"), self._basemap_combo)
 
             self._lang_combo = QComboBox()
             self._lang_combo.addItem("中文", userData="zh")
             self._lang_combo.addItem("English", userData="en")
-            data_form.addRow("语言", self._lang_combo)
+            data_form.addRow(self._fl("语言"), self._lang_combo)
 
             self._zoom_lines_chk = QCheckBox("显示区位连接线")
             self._zoom_lines_chk.setChecked(False)
-            data_form.addRow("", self._zoom_lines_chk)
+            data_form.addRow(self._fl(""), self._zoom_lines_chk)
             sb.addWidget(data_group)
             sb.addSpacing(6)
 
@@ -429,7 +432,7 @@ if _QT_AVAILABLE:
 
             self._engine_combo = QComboBox()
             self._populate_engines()
-            out_form.addRow("引擎", self._engine_combo)
+            out_form.addRow(self._fl("引擎"), self._engine_combo)
 
             fmt_dpi_row = QHBoxLayout()
             fmt_dpi_row.setSpacing(6)
@@ -447,7 +450,7 @@ if _QT_AVAILABLE:
             fmt_dpi_row.addWidget(dpi_lbl)
             fmt_dpi_row.addWidget(self._dpi_combo)
             fmt_dpi_row.addStretch()
-            out_form.addRow("格式 / DPI", fmt_dpi_row)
+            out_form.addRow(self._fl("格式 / DPI"), fmt_dpi_row)
 
             dir_row = QHBoxLayout()
             dir_row.setSpacing(6)
@@ -460,7 +463,7 @@ if _QT_AVAILABLE:
             dir_btn.clicked.connect(self._pick_output_dir)
             dir_row.addWidget(self._out_dir_edit, 1)
             dir_row.addWidget(dir_btn)
-            out_form.addRow("输出目录", dir_row)
+            out_form.addRow(self._fl("输出目录"), dir_row)
             sb.addWidget(out_group)
 
             sb.addStretch(1)

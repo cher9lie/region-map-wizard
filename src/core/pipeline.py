@@ -104,12 +104,23 @@ class MapWizardPipeline:
                     adcode, config.data_type, year=year
                 )
                 from shapely.geometry import mapping
+                geom = None
+                geom_error = ""
                 try:
                     import ee
-                    city_gdf = self.boundary_mgr.get_boundary(adcode, "city")
-                    geom = ee.Geometry(mapping(city_gdf.unary_union))
-                except Exception:
-                    geom = None
+                    if not self.gee_fetcher.is_authenticated():
+                        raise RuntimeError("GEE 未登录，请先完成 GEE 认证设置")
+                    if config.custom_shp:
+                        from src.core.boundary_manager import read_shp_safe
+                        shp = read_shp_safe(Path(config.custom_shp))
+                        if shp.crs and shp.crs.to_epsg() != 4326:
+                            shp = shp.to_crs(epsg=4326)
+                        geom = ee.Geometry(mapping(shp.unary_union))
+                    else:
+                        city_gdf = self.boundary_mgr.get_boundary(adcode, "city")
+                        geom = ee.Geometry(mapping(city_gdf.unary_union))
+                except Exception as e:
+                    geom_error = str(e)
 
                 if geom is not None:
                     raster_path = self._download_raster(
@@ -119,8 +130,7 @@ class MapWizardPipeline:
                     config = _replace(config, raster_path=raster_path)
                     _log("GEE 数据下载完成")
                 else:
-                    _log("GEE 未初始化，跳过栅格下载")
-                    config = _replace(config, raster_path=None)
+                    raise RuntimeError(geom_error or "无法获取研究区几何范围，跳过栅格下载")
 
         # Step 4 — Render
         _p(60, "调用渲染引擎...")

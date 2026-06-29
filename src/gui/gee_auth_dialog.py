@@ -1,14 +1,15 @@
-"""GEE authentication dialog — two-step: login then pick project."""
+"""GEE authentication dialog — two-step: login then enter project ID."""
 
 from __future__ import annotations
 
 try:
     from PyQt5.QtWidgets import (
         QDialog, QVBoxLayout, QHBoxLayout,
-        QLabel, QComboBox, QPushButton,
-        QSizePolicy, QWidget,
+        QLabel, QLineEdit, QPushButton,
+        QWidget,
     )
-    from PyQt5.QtCore import Qt, QThread, pyqtSignal
+    from PyQt5.QtCore import Qt, QThread, QUrl, pyqtSignal
+    from PyQt5.QtGui import QDesktopServices
     _QT_AVAILABLE = True
 except ImportError:
     _QT_AVAILABLE = False
@@ -31,20 +32,6 @@ if _QT_AVAILABLE:
             except Exception as exc:
                 self.done.emit(False, str(exc))
 
-    class _ListProjectsWorker(QThread):
-        done = pyqtSignal(bool, list, str)
-
-        def __init__(self, fetcher):
-            super().__init__()
-            self._fetcher = fetcher
-
-        def run(self):
-            try:
-                projects = self._fetcher.list_projects()
-                self.done.emit(True, projects, "")
-            except Exception as exc:
-                self.done.emit(False, [], str(exc))
-
     class _InitWorker(QThread):
         done = pyqtSignal(bool, str)
 
@@ -63,7 +50,7 @@ if _QT_AVAILABLE:
     # ── Dialog ────────────────────────────────────────────────────────────────
 
     class GEEAuthDialog(QDialog):
-        """Two-step GEE auth: ① OAuth login → ② pick project from dropdown."""
+        """Two-step GEE auth: ① OAuth browser login → ② enter Cloud project ID."""
 
         def __init__(self, parent=None):
             super().__init__(parent)
@@ -133,7 +120,7 @@ if _QT_AVAILABLE:
 
             layout.addWidget(step1_card)
 
-            # ── Step 1/2 separator ─────────────────────────────────────────────
+            # ── Separator ──────────────────────────────────────────────────────
             sep1 = QWidget()
             sep1.setFixedHeight(1)
             sep1.setStyleSheet("background: #eeeeee;")
@@ -153,7 +140,7 @@ if _QT_AVAILABLE:
             )
             step2_badge.setFixedSize(28, 20)
             step2_badge.setAlignment(Qt.AlignCenter)
-            step2_title = QLabel("选择 Cloud 项目")
+            step2_title = QLabel("输入 Cloud 项目 ID")
             step2_title.setStyleSheet("font-size: 13px; font-weight: 600; color: #1e1e1e;")
             s2_header.addWidget(step2_badge)
             s2_header.addSpacing(8)
@@ -161,23 +148,33 @@ if _QT_AVAILABLE:
             s2_header.addStretch()
             s2.addLayout(s2_header)
 
-            proj_row = QHBoxLayout()
-            self._project_combo = QComboBox()
-            self._project_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            self._project_combo.setPlaceholderText("加载中…")
-            proj_row.addWidget(self._project_combo, stretch=1)
-            self._refresh_btn = QPushButton("刷新")
-            self._refresh_btn.setFixedWidth(58)
-            self._refresh_btn.clicked.connect(self._load_projects)
-            proj_row.addWidget(self._refresh_btn)
-            s2.addLayout(proj_row)
-
-            self._proj_hint = QLabel("")
-            self._proj_hint.setWordWrap(True)
-            self._proj_hint.setStyleSheet(
-                "color: #aaaaaa; font-size: 10px;"
+            hint = QLabel(
+                "在 Google Cloud Console 顶部点击项目选择器，即可看到项目 ID（非项目名称）。"
+                "格式示例：<b>my-project-123456</b>"
             )
-            s2.addWidget(self._proj_hint)
+            hint.setWordWrap(True)
+            hint.setStyleSheet("color: #888888; font-size: 11px;")
+            s2.addWidget(hint)
+
+            proj_row = QHBoxLayout()
+            self._project_input = QLineEdit()
+            self._project_input.setPlaceholderText("输入项目 ID，例如 my-project-123456")
+            self._project_input.setStyleSheet(
+                "QLineEdit { border: 1px solid #cccccc; border-radius: 4px;"
+                " padding: 4px 8px; font-size: 12px; min-height: 32px; }"
+                "QLineEdit:focus { border-color: #0067c0; }"
+            )
+            self._project_input.textChanged.connect(self._on_project_input_changed)
+            proj_row.addWidget(self._project_input, stretch=1)
+
+            console_btn = QPushButton("打开控制台")
+            console_btn.setFixedWidth(88)
+            console_btn.setStyleSheet("QPushButton { min-height: 32px; }")
+            console_btn.clicked.connect(
+                lambda: QDesktopServices.openUrl(QUrl("https://console.cloud.google.com"))
+            )
+            proj_row.addWidget(console_btn)
+            s2.addLayout(proj_row)
 
             layout.addWidget(self._step2_card)
             self._step2_card.setVisible(False)
@@ -189,10 +186,10 @@ if _QT_AVAILABLE:
             layout.addWidget(self._status_label)
 
             # ── Buttons ────────────────────────────────────────────────────────
-            sep = QWidget()
-            sep.setFixedHeight(1)
-            sep.setStyleSheet("background: #eeeeee;")
-            layout.addWidget(sep)
+            sep2 = QWidget()
+            sep2.setFixedHeight(1)
+            sep2.setStyleSheet("background: #eeeeee;")
+            layout.addWidget(sep2)
 
             btn_row = QHBoxLayout()
             btn_row.addStretch()
@@ -218,7 +215,15 @@ if _QT_AVAILABLE:
         def _check_existing_login(self) -> None:
             if self._fetcher and self._fetcher.has_credentials():
                 self._mark_logged_in()
-                self._load_projects()
+                # Pre-fill with previously used project if any
+                cur = getattr(self._fetcher, "_project_id", "")
+                if cur:
+                    self._project_input.setText(cur)
+            self._login_btn.setEnabled(True)
+            self._login_btn.setText("在浏览器中登录")
+
+        def _on_project_input_changed(self, text: str) -> None:
+            self._confirm_btn.setEnabled(bool(text.strip()))
 
         def _start_login(self) -> None:
             if self._fetcher is None:
@@ -226,7 +231,10 @@ if _QT_AVAILABLE:
                 return
             self._login_btn.setEnabled(False)
             self._login_btn.setText("等待浏览器授权…")
-            self._set_status("请在弹出的浏览器窗口中完成 Google 账号授权…")
+            self._set_status(
+                "浏览器授权页面已在后台打开，请切换到浏览器完成登录后返回此窗口。"
+                "（若未弹出请检查任务栏）"
+            )
             self._worker = _LoginWorker(self._fetcher)
             self._worker.done.connect(self._on_login_done)
             self._worker.start()
@@ -236,59 +244,22 @@ if _QT_AVAILABLE:
             self._login_btn.setText("在浏览器中登录")
             if success:
                 self._mark_logged_in()
-                self._load_projects()
             else:
                 self._set_status(f"登录失败: {error}")
 
         def _mark_logged_in(self) -> None:
             self._login_status.setText("已登录")
             self._step2_card.setVisible(True)
+            self._set_status("登录成功，请在下方输入您的 Cloud 项目 ID 后点击完成。")
             self.adjustSize()
 
-        def _load_projects(self) -> None:
-            if self._fetcher is None:
-                return
-            self._project_combo.clear()
-            self._project_combo.setPlaceholderText("加载中…")
-            self._refresh_btn.setEnabled(False)
-            self._proj_hint.setText("")
-            self._confirm_btn.setEnabled(False)
-            self._set_status("正在获取项目列表…")
-            self._worker = _ListProjectsWorker(self._fetcher)
-            self._worker.done.connect(self._on_projects_loaded)
-            self._worker.start()
-
-        def _on_projects_loaded(self, success: bool, projects: list, error: str) -> None:
-            self._refresh_btn.setEnabled(True)
-            if success:
-                if projects:
-                    self._project_combo.clear()
-                    for pid in projects:
-                        self._project_combo.addItem(pid)
-                    cur = getattr(self._fetcher, "_project_id", "")
-                    if cur:
-                        idx = self._project_combo.findText(cur)
-                        if idx >= 0:
-                            self._project_combo.setCurrentIndex(idx)
-                    self._confirm_btn.setEnabled(True)
-                    self._set_status(f"找到 {len(projects)} 个项目，请选择后点击完成。")
-                    self._proj_hint.setText(
-                        "如未找到项目，请先在 console.cloud.google.com 创建并启用 Earth Engine API。"
-                    )
-                else:
-                    self._project_combo.setPlaceholderText("（未找到项目）")
-                    self._set_status("未找到可用项目，请检查 GEE 权限。")
-            else:
-                self._project_combo.setPlaceholderText("（加载失败）")
-                self._set_status(f"获取项目列表失败: {error}")
-
         def _confirm(self) -> None:
-            project_id = self._project_combo.currentText().strip()
+            project_id = self._project_input.text().strip()
             if not project_id:
-                self._set_status("请先选择一个项目")
+                self._set_status("请先输入项目 ID")
                 return
             self._confirm_btn.setEnabled(False)
-            self._set_status(f"正在初始化项目 {project_id}…")
+            self._set_status(f"正在连接项目 {project_id}…")
             self._worker = _InitWorker(self._fetcher, project_id)
             self._worker.done.connect(self._on_init_done)
             self._worker.start()
@@ -296,10 +267,11 @@ if _QT_AVAILABLE:
         def _on_init_done(self, success: bool, error: str) -> None:
             self._confirm_btn.setEnabled(True)
             if success:
-                self._set_status(f"认证成功！当前项目: {self._project_combo.currentText()}")
+                project_id = self._project_input.text().strip()
+                self._set_status(f"认证成功！当前项目: {project_id}")
                 self._login_status.setText("已登录并初始化")
             else:
-                self._set_status(f"初始化失败: {error}")
+                self._set_status(f"初始化失败: {error}\n请检查项目 ID 是否正确，以及该项目是否已启用 Earth Engine API。")
 
         def _set_status(self, msg: str) -> None:
             self._status_label.setText(msg)

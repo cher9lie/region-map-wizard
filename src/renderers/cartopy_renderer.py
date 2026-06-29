@@ -282,6 +282,8 @@ class CartopyRenderer(BaseRenderer):
         )
         rect = _AX_CHINA_FULL if getattr(self, "_use_two_panel", False) else _AX_CHINA
         ax = fig.add_axes(rect, projection=lcc)
+        # Pin to top-left so the top border aligns with the detail map top border.
+        ax.set_anchor("NW")
         ax.set_extent([73, 135, 15, 54], crs=ccrs.PlateCarree())
 
         # Basemap tiles (fills the full panel, no clip needed)
@@ -295,7 +297,7 @@ class CartopyRenderer(BaseRenderer):
         if prov is not None:
             prov.plot(ax=ax, facecolor="#DDEEDD40", edgecolor="#777777",
                       linewidth=0.3, transform=ccrs.PlateCarree(), zorder=3)
-            if config.province_adcode:
+            if config.province_adcode and not config.custom_shp:
                 sel = prov[prov["adcode"] == config.province_adcode]
                 if not sel.empty:
                     sel.plot(ax=ax, facecolor=f"{config.highlight_color}44",
@@ -307,6 +309,34 @@ class CartopyRenderer(BaseRenderer):
         if country is not None:
             country.plot(ax=ax, facecolor="none", edgecolor="#222222",
                          linewidth=0.7, transform=ccrs.PlateCarree(), zorder=5)
+
+        # Always draw study-area red box on the China map, regardless of
+        # whether zoom connection lines are enabled.
+        if config.custom_shp:
+            try:
+                import numpy as _np
+                from src.core.boundary_manager import read_shp_safe as _rss
+                _shp = _rss(Path(config.custom_shp))
+                if _shp.crs and _shp.crs.to_epsg() != 4326:
+                    _shp = _shp.to_crs(epsg=4326)
+                _b = _shp.total_bounds  # [minx, miny, maxx, maxy]
+                _lons = [_b[0], _b[2], _b[2], _b[0], _b[0]]
+                _lats = [_b[1], _b[1], _b[3], _b[3], _b[1]]
+                ax.plot(_lons, _lats, "-", color=config.highlight_color,
+                        linewidth=1.2, transform=ccrs.PlateCarree(), zorder=6)
+            except Exception:
+                pass
+        elif config.city_adcode:
+            try:
+                _city = self._read_layer(config.city_boundary, "city",
+                                         filter_col="adcode",
+                                         filter_val=config.city_adcode)
+                if _city is not None:
+                    _city.plot(ax=ax, facecolor="none",
+                               edgecolor=config.highlight_color, linewidth=1.0,
+                               transform=ccrs.PlateCarree(), zorder=6)
+            except Exception:
+                pass
 
         ax.spines["geo"].set_linewidth(0.6)
         return ax
@@ -579,52 +609,76 @@ class CartopyRenderer(BaseRenderer):
         c_tl = (dp[0], dp[1] + dp[3])   # top-left corner of (c)
         c_bl = (dp[0], dp[1])            # bottom-left corner of (c)
 
-        # ── 2-PANEL MODE (large custom SHP): (a) right corners → (c) left corners ──
+        # ── 2-PANEL MODE (large custom SHP): SHP bbox right corners → (c) left ──
         if two_panel:
+            import numpy as _np2
             cp = _pos(ax_china)
-            a_tr = (cp[0] + cp[2], cp[1] + cp[3])
-            a_br = (cp[0] + cp[2], cp[1])
-            _line(a_tr, c_tl)
-            _line(a_br, c_bl)
-            # Zoom box in (a) showing where the custom SHP sits
-            if ax_china is not None and config.custom_shp:
+            box_drawn = False
+            if config.custom_shp:
                 try:
                     from src.core.boundary_manager import read_shp_safe
                     shp = read_shp_safe(Path(config.custom_shp))
                     if shp.crs and shp.crs.to_epsg() != 4326:
                         shp = shp.to_crs(epsg=4326)
                     b = shp.total_bounds
-                    import numpy as np
-                    lons = np.array([b[0], b[2], b[2], b[0]])
-                    lats = np.array([b[1], b[1], b[3], b[3]])
+                    lons = _np2.array([b[0], b[2], b[2], b[0]])
+                    lats = _np2.array([b[1], b[1], b[3], b[3]])
                     fp = _geo_to_fig(ax_china, lons, lats, ccrs.PlateCarree())
                     bx0, by0, bx1, by1 = _clamp_to_panel(fp, cp)
                     _box(bx0, by0, bx1, by1, config.highlight_color)
+                    # Connect from SHP bbox right corners to (c) left corners
+                    _line((bx1, by1), c_tl)
+                    _line((bx1, by0), c_bl)
+                    box_drawn = True
                 except Exception:
                     pass
+            if not box_drawn:
+                # Fallback: connect from China panel right edge
+                _line((cp[0] + cp[2], cp[1] + cp[3]), c_tl)
+                _line((cp[0] + cp[2], cp[1]),          c_bl)
             return
 
         # ── 3-PANEL MODE ──────────────────────────────────────────────────────
 
-        # Step 1: (b) city zoom box → right side connects to (c) left corners
-        city_connected = False
-        if ax_province is not None and config.city_adcode:
-            try:
-                import numpy as np
-                city = self._read_layer(config.city_boundary, "city",
-                                        filter_col="adcode", filter_val=config.city_adcode)
-                if city is not None:
-                    pp = _pos(ax_province)
-                    cb = city.total_bounds
-                    lons = np.array([cb[0], cb[2], cb[2], cb[0]])
-                    lats = np.array([cb[1], cb[1], cb[3], cb[3]])
-                    fp_c = _geo_to_fig(ax_province, lons, lats)
-                    cx0, cy0, cx1, cy1 = _clamp_to_panel(fp_c, pp)
+        import numpy as np
 
+        def _shp_bounds_in_panel(ax_panel, panel_rect):
+            """Return clamped figure-fraction bbox of the custom SHP in ax_panel."""
+            from src.core.boundary_manager import read_shp_safe
+            shp = read_shp_safe(Path(config.custom_shp))
+            if shp.crs and shp.crs.to_epsg() != 4326:
+                shp = shp.to_crs(epsg=4326)
+            b = shp.total_bounds
+            lons = np.array([b[0], b[2], b[2], b[0]])
+            lats = np.array([b[1], b[1], b[3], b[3]])
+            fp = _geo_to_fig(ax_panel, lons, lats)
+            return _clamp_to_panel(fp, panel_rect)
+
+        # Step 1: (b) study-area zoom box → right side connects to (c) left corners
+        city_connected = False
+        if ax_province is not None:
+            try:
+                pp = _pos(ax_province)
+                if config.custom_shp:
+                    # Use custom SHP bounding box in province panel
+                    cx0, cy0, cx1, cy1 = _shp_bounds_in_panel(ax_province, pp)
                     _box(cx0, cy0, cx1, cy1, config.highlight_color, lw_box=0.8)
                     _line((cx1, cy1), c_tl)
                     _line((cx1, cy0), c_bl)
                     city_connected = True
+                elif config.city_adcode:
+                    city = self._read_layer(config.city_boundary, "city",
+                                            filter_col="adcode", filter_val=config.city_adcode)
+                    if city is not None:
+                        cb = city.total_bounds
+                        lons = np.array([cb[0], cb[2], cb[2], cb[0]])
+                        lats = np.array([cb[1], cb[1], cb[3], cb[3]])
+                        fp_c = _geo_to_fig(ax_province, lons, lats)
+                        cx0, cy0, cx1, cy1 = _clamp_to_panel(fp_c, pp)
+                        _box(cx0, cy0, cx1, cy1, config.highlight_color, lw_box=0.8)
+                        _line((cx1, cy1), c_tl)
+                        _line((cx1, cy0), c_bl)
+                        city_connected = True
             except Exception:
                 pass
 
@@ -634,30 +688,38 @@ class CartopyRenderer(BaseRenderer):
             _line((pp[0] + pp[2], pp[1] + pp[3]), c_tl)
             _line((pp[0] + pp[2], pp[1]),          c_bl)
 
-        # Step 2: (a) province zoom box → (b) top corners
-        if ax_china is None or not config.province_adcode:
+        # Step 2: (a) study-area zoom box → (b) top corners
+        if ax_china is None:
             return
         try:
-            import numpy as np
-            prov = self._read_layer(config.province_boundary, "province",
-                                    filter_col="adcode", filter_val=config.province_adcode)
-            if prov is None:
-                return
-
             cp = _pos(ax_china)
-            pp = _pos(ax_province)
-            b = prov.total_bounds
-            lons = np.array([b[0], b[2], b[2], b[0]])
-            lats = np.array([b[1], b[1], b[3], b[3]])
-            fp = _geo_to_fig(ax_china, lons, lats, ccrs.PlateCarree())
-            bx0, by0, bx1, by1 = _clamp_to_panel(fp, cp)
+            pp = _pos(ax_province) if ax_province is not None else None
 
-            _box(bx0, by0, bx1, by1, config.highlight_color, lw_box=1.0)
-
-            b_tl = (pp[0],          pp[1] + pp[3])
-            b_tr = (pp[0] + pp[2],  pp[1] + pp[3])
-            _line((bx0, by0), b_tl, color=config.highlight_color)
-            _line((bx1, by0), b_tr, color=config.highlight_color)
+            if config.custom_shp:
+                # Draw custom SHP bbox on China panel and connect to (b) top
+                bx0, by0, bx1, by1 = _shp_bounds_in_panel(ax_china, cp)
+                _box(bx0, by0, bx1, by1, config.highlight_color, lw_box=1.0)
+                if pp is not None:
+                    b_tl = (pp[0],         pp[1] + pp[3])
+                    b_tr = (pp[0] + pp[2], pp[1] + pp[3])
+                    _line((bx0, by0), b_tl, color=config.highlight_color)
+                    _line((bx1, by0), b_tr, color=config.highlight_color)
+            elif config.province_adcode:
+                prov = self._read_layer(config.province_boundary, "province",
+                                        filter_col="adcode", filter_val=config.province_adcode)
+                if prov is None:
+                    return
+                b = prov.total_bounds
+                lons = np.array([b[0], b[2], b[2], b[0]])
+                lats = np.array([b[1], b[1], b[3], b[3]])
+                fp = _geo_to_fig(ax_china, lons, lats, ccrs.PlateCarree())
+                bx0, by0, bx1, by1 = _clamp_to_panel(fp, cp)
+                _box(bx0, by0, bx1, by1, config.highlight_color, lw_box=1.0)
+                if pp is not None:
+                    b_tl = (pp[0],         pp[1] + pp[3])
+                    b_tr = (pp[0] + pp[2], pp[1] + pp[3])
+                    _line((bx0, by0), b_tl, color=config.highlight_color)
+                    _line((bx1, by0), b_tr, color=config.highlight_color)
         except Exception:
             pass
 
@@ -739,13 +801,19 @@ class CartopyRenderer(BaseRenderer):
         is_en = config.language == "en"
         if config.title:
             title = config.title
-        elif is_en:
-            area_name = config.custom_name or config.city_name
-            area_en = self._to_english(area_name, config.city_adcode)
-            title = f"Location Map of {area_en} Study Area"
         else:
-            area_name = config.custom_name or config.city_name
-            title = f"{area_name}研究区区位图"
+            # Priority: explicit custom_name → SHP filename → city name
+            if config.custom_name:
+                area_name = config.custom_name
+            elif config.custom_shp:
+                area_name = Path(config.custom_shp).stem
+            else:
+                area_name = config.city_name
+            if is_en:
+                area_en = self._to_english(area_name, config.city_adcode)
+                title = f"Location Map of {area_en} Study Area"
+            else:
+                title = f"{area_name}研究区区位图"
 
         # Centre title across the full figure width
         fig.text(0.5, 0.982, title,
@@ -754,12 +822,13 @@ class CartopyRenderer(BaseRenderer):
                  fontname="SimHei" if not is_en else "Times New Roman")
 
     def _add_panel_labels(self, fig, config: RenderConfig) -> None:
-        """(a)(b)(c) labels placed just ABOVE each panel frame (outside)."""
+        """(a)(b) in 2-panel mode; (a)(b)(c) in 3-panel mode."""
         two_panel = getattr(self, "_use_two_panel", False)
         china_rect = _AX_CHINA_FULL if two_panel else _AX_CHINA
-        panels = [("(a)", china_rect), ("(c)", _AX_DETAIL)]
-        if not two_panel:
-            panels.insert(1, ("(b)", _AX_PROVINCE))
+        if two_panel:
+            panels = [("(a)", china_rect), ("(b)", _AX_DETAIL)]
+        else:
+            panels = [("(a)", china_rect), ("(b)", _AX_PROVINCE), ("(c)", _AX_DETAIL)]
         for label, ax_rect in panels:
             x = ax_rect[0]                   # left edge of panel
             y = ax_rect[1] + ax_rect[3]      # top edge of panel

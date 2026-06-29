@@ -9,7 +9,7 @@ try:
     from PyQt5.QtWidgets import (
         QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QLabel, QComboBox, QPushButton, QProgressBar,
-        QTextEdit, QFileDialog, QGroupBox, QFormLayout,
+        QTextEdit, QFileDialog, QFormLayout,
         QLineEdit, QMessageBox, QApplication, QStatusBar,
         QScrollArea, QSizePolicy, QFrame, QCheckBox,
     )
@@ -29,93 +29,80 @@ _DATA_DIR = Path(__file__).parent.parent / "data"
 
 # ── Stylesheet ─────────────────────────────────────────────────────────────────
 _STYLE = """
-/* ── Global ──────────────────────────────────────────────────────────────── */
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
 * {
     font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif;
     font-size: 12px;
-    color: #1e1e1e;
+    color: #0F172A;
+    outline: none;
 }
 QMainWindow, QDialog {
-    background: #f0f0f0;
+    background: #F8FAFC;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
 QWidget#sidebar {
-    background: #ffffff;
-    border-right: 1px solid #e0e0e0;
+    background: #FFFFFF;
+    border-right: 1px solid #F1F5F9;
 }
 QLabel#appTitle {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    color: #0067c0;
-    letter-spacing: -0.3px;
+    color: #0F172A;
+    letter-spacing: -0.5px;
 }
 QLabel#appSubtitle {
     font-size: 11px;
-    color: #aaaaaa;
-    letter-spacing: 0px;
-}
-QWidget#divider {
-    background: #eeeeee;
+    color: #94A3B8;
 }
 
-/* ── Section headers (flat, Windows 11 style) ─────────────────────────────── */
-QGroupBox {
-    background: transparent;
-    border: none;
-    border-top: 1px solid #eeeeee;
-    margin-top: 18px;
-    padding: 8px 0px 2px 0px;
+/* Section header — uppercase label, no box */
+QLabel#sectionLabel {
     font-size: 10px;
-    font-weight: 700;
-    color: #aaaaaa;
-    letter-spacing: 0.5px;
-}
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    padding: 0px 0px;
-    left: 0px;
-    background: transparent;
+    font-weight: 600;
+    color: #94A3B8;
+    letter-spacing: 0.8px;
+    padding-top: 16px;
+    padding-bottom: 2px;
 }
 
 /* ── Form row labels ──────────────────────────────────────────────────────── */
 QLabel#formLabel {
-    color: #555555;
+    color: #64748B;
     font-size: 12px;
-    min-width: 62px;
-    max-width: 62px;
+    min-width: 56px;
+    max-width: 56px;
 }
 
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 QComboBox, QLineEdit {
-    border: 1px solid #d4d4d4;
-    border-radius: 5px;
-    padding: 4px 8px;
-    background: #ffffff;
-    color: #1e1e1e;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 3px 8px;
+    background: #FFFFFF;
+    color: #0F172A;
     font-size: 12px;
     min-height: 26px;
-    selection-background-color: #cce0f5;
+    selection-background-color: #DBEAFE;
 }
 QComboBox:hover, QLineEdit:hover {
-    border-color: #0078d4;
+    border-color: #CBD5E1;
 }
 QComboBox:focus, QLineEdit:focus {
-    border: 1.5px solid #0067c0;
+    border: 1px solid #3B82F6;
 }
 QComboBox::drop-down {
     border: none;
-    width: 22px;
+    width: 20px;
     subcontrol-origin: padding;
     subcontrol-position: center right;
 }
 QComboBox QAbstractItemView {
-    border: 1px solid #d4d4d4;
-    border-radius: 4px;
-    background: #ffffff;
-    selection-background-color: #deeeff;
-    selection-color: #0054a6;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    background: #FFFFFF;
+    selection-background-color: #EFF6FF;
+    selection-color: #1D4ED8;
     padding: 2px 0;
     outline: none;
 }
@@ -126,164 +113,164 @@ QComboBox QAbstractItemView::item {
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 QPushButton {
-    border: 1px solid #d4d4d4;
-    border-radius: 5px;
-    padding: 5px 14px;
-    background: #ffffff;
-    color: #1e1e1e;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 4px 12px;
+    background: #FFFFFF;
+    color: #374151;
     font-size: 12px;
-    min-height: 28px;
-    outline: none;
+    min-height: 26px;
 }
 QPushButton:hover {
-    background: #f0f6ff;
-    border-color: #0078d4;
-    color: #0054a6;
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+    color: #111827;
 }
 QPushButton:pressed {
-    background: #dceeff;
-    border-color: #0054a6;
+    background: #F1F5F9;
+    border-color: #94A3B8;
 }
 QPushButton:disabled {
-    color: #bbbbbb;
-    background: #f7f7f7;
-    border-color: #e8e8e8;
+    color: #CBD5E1;
+    background: #F8FAFC;
+    border-color: #F1F5F9;
 }
 
 QPushButton#runButton {
-    background: #0067c0;
-    color: #ffffff;
+    background: #18181B;
+    color: #FFFFFF;
     border: none;
-    border-radius: 7px;
+    border-radius: 8px;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     min-height: 42px;
     letter-spacing: 0.2px;
 }
 QPushButton#runButton:hover {
-    background: #005aa8;
-    color: #ffffff;
+    background: #27272A;
+    color: #FFFFFF;
     border: none;
 }
 QPushButton#runButton:pressed {
-    background: #004e96;
-    color: #ffffff;
+    background: #3F3F46;
+    color: #FFFFFF;
+    border: none;
+}
+QPushButton#runButton:disabled {
+    background: #D4D4D8;
+    color: #FFFFFF;
     border: none;
 }
 
 QPushButton#smallBtn {
     font-size: 11px;
     min-height: 24px;
-    padding: 3px 10px;
-    border-radius: 4px;
-}
-QPushButton#geeBtn {
-    background: #f7f7f7;
-    border: 1px solid #ddd;
-    color: #555555;
-    font-size: 11px;
-    min-height: 30px;
+    padding: 2px 8px;
     border-radius: 5px;
 }
+
+QPushButton#geeBtn {
+    background: transparent;
+    border: 1px solid #E2E8F0;
+    color: #64748B;
+    font-size: 11px;
+    min-height: 30px;
+    border-radius: 6px;
+}
 QPushButton#geeBtn:hover {
-    background: #eef4ff;
-    border-color: #0078d4;
-    color: #0067c0;
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+    color: #374151;
 }
 
 /* ── Checkbox ─────────────────────────────────────────────────────────────── */
 QCheckBox {
-    color: #555555;
+    color: #64748B;
     font-size: 12px;
     spacing: 6px;
 }
 QCheckBox::indicator {
-    width: 15px;
-    height: 15px;
-    border: 1.5px solid #c8c8c8;
-    border-radius: 3px;
-    background: #ffffff;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 4px;
+    background: #FFFFFF;
 }
-QCheckBox::indicator:hover { border-color: #0078d4; }
+QCheckBox::indicator:hover { border-color: #94A3B8; }
 QCheckBox::indicator:checked {
-    background: #0067c0;
-    border-color: #0067c0;
-}
-QCheckBox::indicator:checked:hover {
-    background: #005aa8;
-    border-color: #005aa8;
+    background: #18181B;
+    border-color: #18181B;
 }
 
 /* ── Progress bar ─────────────────────────────────────────────────────────── */
 QProgressBar {
     border: none;
-    border-radius: 3px;
-    background: #e8e8e8;
-    max-height: 4px;
+    border-radius: 2px;
+    background: #F1F5F9;
+    max-height: 3px;
     font-size: 0px;
 }
 QProgressBar::chunk {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 #0078d4, stop:1 #00b4d8);
-    border-radius: 3px;
+    background: #18181B;
+    border-radius: 2px;
 }
 
 /* ── Log panel ────────────────────────────────────────────────────────────── */
 QTextEdit#logPanel {
-    border: 1px solid #ebebeb;
+    border: 1px solid #F1F5F9;
     border-radius: 6px;
-    background: #fafafa;
-    color: #666666;
+    background: #FAFAFA;
+    color: #64748B;
     font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
     font-size: 11px;
     padding: 4px 8px;
-    selection-background-color: #cce0f5;
+    selection-background-color: #DBEAFE;
 }
 
 /* ── Preview card ─────────────────────────────────────────────────────────── */
 QFrame#previewCard {
-    background: #ffffff;
-    border: 1px solid #e8e8e8;
-    border-radius: 4px;
+    background: #FFFFFF;
+    border: 1px solid #F1F5F9;
+    border-radius: 8px;
 }
 
 /* ── Scrollbars ───────────────────────────────────────────────────────────── */
 QScrollBar:vertical {
     border: none; background: transparent;
-    width: 5px; margin: 0;
+    width: 4px; margin: 0;
 }
 QScrollBar::handle:vertical {
-    background: #cccccc; border-radius: 2px; min-height: 20px;
+    background: #E2E8F0; border-radius: 2px; min-height: 24px;
 }
-QScrollBar::handle:vertical:hover { background: #aaaaaa; }
+QScrollBar::handle:vertical:hover { background: #CBD5E1; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
 QScrollBar:horizontal {
     border: none; background: transparent;
-    height: 5px; margin: 0;
+    height: 4px; margin: 0;
 }
 QScrollBar::handle:horizontal {
-    background: #cccccc; border-radius: 2px; min-width: 20px;
+    background: #E2E8F0; border-radius: 2px; min-width: 24px;
 }
-QScrollBar::handle:horizontal:hover { background: #aaaaaa; }
+QScrollBar::handle:horizontal:hover { background: #CBD5E1; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; }
 
 /* ── Status bar ───────────────────────────────────────────────────────────── */
 QStatusBar {
-    background: #f0f0f0;
-    border-top: 1px solid #e0e0e0;
+    background: #F8FAFC;
+    border-top: 1px solid #F1F5F9;
     font-size: 11px;
-    color: #888888;
+    color: #94A3B8;
     padding: 0 8px;
 }
 QStatusBar::item { border: none; }
 
 /* ── Dialogs ──────────────────────────────────────────────────────────────── */
-QDialog { background: #ffffff; }
+QDialog { background: #FFFFFF; }
 QDialog QFrame { border: none; background: transparent; }
-QDialog QLabel { font-size: 12px; color: #333333; }
-QMessageBox { background: #ffffff; }
+QDialog QLabel { font-size: 12px; color: #374151; }
+QMessageBox { background: #FFFFFF; }
 QMessageBox QPushButton { min-width: 72px; }
 """
 
@@ -307,7 +294,6 @@ if _QT_AVAILABLE:
             self.setMinimumSize(960, 620)
             self.resize(1180, 760)
 
-            # Apply stylesheet to the whole application so dialogs inherit it
             app = QApplication.instance()
             if app:
                 app.setStyleSheet(_STYLE)
@@ -316,14 +302,38 @@ if _QT_AVAILABLE:
             self._populate_provinces()
             self._load_saved_state()
 
-        # ── UI construction ────────────────────────────────────────────────────
+        # ── UI helpers ─────────────────────────────────────────────────────────
 
         @staticmethod
         def _fl(text: str) -> "QLabel":
-            """Form-row label with consistent fixed width for column alignment."""
+            """Form-row label with consistent fixed width."""
             lbl = QLabel(text)
             lbl.setObjectName("formLabel")
             return lbl
+
+        @staticmethod
+        def _sec(text: str) -> "QLabel":
+            """Uppercase section header — typography only, no decorative box."""
+            lbl = QLabel(text.upper())
+            lbl.setObjectName("sectionLabel")
+            return lbl
+
+        @staticmethod
+        def _wrap_form(form: "QFormLayout") -> "QWidget":
+            """Wrap a QFormLayout in a plain QWidget for adding to a VBox."""
+            w = QWidget()
+            w.setLayout(form)
+            return w
+
+        def _make_form(self) -> "QFormLayout":
+            f = QFormLayout()
+            f.setSpacing(6)
+            f.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            f.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+            f.setContentsMargins(0, 4, 0, 0)
+            return f
+
+        # ── UI construction ────────────────────────────────────────────────────
 
         def _build_ui(self) -> None:
             central = QWidget()
@@ -335,10 +345,9 @@ if _QT_AVAILABLE:
             root.setSpacing(0)
 
             # ── LEFT SIDEBAR ───────────────────────────────────────────────────
-            sidebar = QWidget()
-            sidebar.setObjectName("sidebar")
-            sidebar.setFixedWidth(292)
-            sb = QVBoxLayout(sidebar)
+            sidebar_content = QWidget()
+            sidebar_content.setObjectName("sidebar")
+            sb = QVBoxLayout(sidebar_content)
             sb.setContentsMargins(16, 22, 16, 16)
             sb.setSpacing(0)
 
@@ -350,21 +359,10 @@ if _QT_AVAILABLE:
             sb.addWidget(title_lbl)
             sb.addSpacing(3)
             sb.addWidget(sub_lbl)
-            sb.addSpacing(14)
-
-            div = QWidget()
-            div.setObjectName("divider")
-            div.setFixedHeight(1)
-            sb.addWidget(div)
-            sb.addSpacing(4)
 
             # ── 研究区 ─────────────────────────────────────────────────────────
-            area_group = QGroupBox("研究区选择")
-            area_form = QFormLayout(area_group)
-            area_form.setSpacing(7)
-            area_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            area_form.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
-            area_form.setContentsMargins(0, 4, 0, 2)
+            sb.addWidget(self._sec("研究区"))
+            area_form = self._make_form()
 
             self._province_combo = QComboBox()
             self._province_combo.currentIndexChanged.connect(self._on_province_changed)
@@ -377,25 +375,26 @@ if _QT_AVAILABLE:
             shp_row.setSpacing(6)
             shp_row.setContentsMargins(0, 0, 0, 0)
             self._shp_label = QLabel("未选择")
-            self._shp_label.setStyleSheet("color: #b0b0b0; font-size: 11px;")
+            self._shp_label.setStyleSheet("color: #94A3B8; font-size: 11px;")
             self._shp_label.setWordWrap(True)
             shp_btn = QPushButton("导入…")
             shp_btn.setObjectName("smallBtn")
-            shp_btn.setFixedWidth(58)
+            shp_btn.setFixedWidth(52)
             shp_btn.clicked.connect(self._import_shp)
+            self._shp_clear_btn = QPushButton("清除")
+            self._shp_clear_btn.setObjectName("smallBtn")
+            self._shp_clear_btn.setFixedWidth(44)
+            self._shp_clear_btn.setVisible(False)
+            self._shp_clear_btn.clicked.connect(self._clear_shp)
             shp_row.addWidget(self._shp_label, 1)
             shp_row.addWidget(shp_btn)
+            shp_row.addWidget(self._shp_clear_btn)
             area_form.addRow(self._fl("自定义"), shp_row)
-            sb.addWidget(area_group)
-            sb.addSpacing(6)
+            sb.addWidget(self._wrap_form(area_form))
 
             # ── 数据选项 ───────────────────────────────────────────────────────
-            data_group = QGroupBox("数据选项")
-            data_form = QFormLayout(data_group)
-            data_form.setSpacing(7)
-            data_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            data_form.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
-            data_form.setContentsMargins(0, 4, 0, 2)
+            sb.addWidget(self._sec("数据选项"))
+            data_form = self._make_form()
 
             self._data_type_combo = QComboBox()
             self._data_type_combo.addItems(["仅矢量", "DEM 高程", "山体阴影", "Sentinel-2 真彩色"])
@@ -419,16 +418,11 @@ if _QT_AVAILABLE:
             self._zoom_lines_chk = QCheckBox("显示区位连接线")
             self._zoom_lines_chk.setChecked(False)
             data_form.addRow(self._fl(""), self._zoom_lines_chk)
-            sb.addWidget(data_group)
-            sb.addSpacing(6)
+            sb.addWidget(self._wrap_form(data_form))
 
             # ── 渲染与输出 ──────────────────────────────────────────────────────
-            out_group = QGroupBox("渲染与输出")
-            out_form = QFormLayout(out_group)
-            out_form.setSpacing(7)
-            out_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            out_form.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
-            out_form.setContentsMargins(0, 4, 0, 2)
+            sb.addWidget(self._sec("渲染与输出"))
+            out_form = self._make_form()
 
             self._engine_combo = QComboBox()
             self._populate_engines()
@@ -439,18 +433,18 @@ if _QT_AVAILABLE:
             fmt_dpi_row.setContentsMargins(0, 0, 0, 0)
             self._fmt_combo = QComboBox()
             self._fmt_combo.addItems(["JPG", "PNG", "PDF"])
-            self._fmt_combo.setFixedWidth(76)
+            self._fmt_combo.setFixedWidth(72)
             dpi_lbl = QLabel("DPI")
-            dpi_lbl.setStyleSheet("color: #888; font-size: 11px; min-width: 0;")
+            dpi_lbl.setStyleSheet("color: #94A3B8; font-size: 11px; min-width: 0;")
             self._dpi_combo = QComboBox()
             self._dpi_combo.addItems(["150", "300", "600"])
             self._dpi_combo.setCurrentText("300")
-            self._dpi_combo.setFixedWidth(76)
+            self._dpi_combo.setFixedWidth(72)
             fmt_dpi_row.addWidget(self._fmt_combo)
             fmt_dpi_row.addWidget(dpi_lbl)
             fmt_dpi_row.addWidget(self._dpi_combo)
             fmt_dpi_row.addStretch()
-            out_form.addRow(self._fl("格式 / DPI"), fmt_dpi_row)
+            out_form.addRow(self._fl("格式/DPI"), fmt_dpi_row)
 
             dir_row = QHBoxLayout()
             dir_row.setSpacing(6)
@@ -459,34 +453,72 @@ if _QT_AVAILABLE:
             self._out_dir_edit.setPlaceholderText("选择输出目录…")
             dir_btn = QPushButton("…")
             dir_btn.setObjectName("smallBtn")
-            dir_btn.setFixedWidth(32)
+            dir_btn.setFixedWidth(28)
             dir_btn.clicked.connect(self._pick_output_dir)
             dir_row.addWidget(self._out_dir_edit, 1)
             dir_row.addWidget(dir_btn)
             out_form.addRow(self._fl("输出目录"), dir_row)
-            sb.addWidget(out_group)
+            sb.addWidget(self._wrap_form(out_form))
+
+            # ── 缓存 ───────────────────────────────────────────────────────────
+            sb.addWidget(self._sec("缓存"))
+            cache_form = self._make_form()
+
+            cache_dir_row = QHBoxLayout()
+            saved_cache = self._cfg.get("cache_dir", "")
+            self._cache_dir_edit = QLineEdit(saved_cache or str(Path.home() / ".rmw_cache"))
+            self._cache_dir_edit.setReadOnly(True)
+            self._cache_dir_edit.setStyleSheet(
+                "QLineEdit { color: #64748B; font-size: 11px; }"
+            )
+            cache_dir_btn = QPushButton("…")
+            cache_dir_btn.setObjectName("smallBtn")
+            cache_dir_btn.setFixedWidth(28)
+            cache_dir_btn.clicked.connect(self._pick_cache_dir)
+            cache_dir_row.addWidget(self._cache_dir_edit, 1)
+            cache_dir_row.addWidget(cache_dir_btn)
+            cache_form.addRow(self._fl("目录"), cache_dir_row)
+
+            self._cache_size_label = QLabel(self._get_cache_size_str())
+            self._cache_size_label.setStyleSheet("color: #94A3B8; font-size: 11px;")
+            cache_form.addRow(self._fl("大小"), self._cache_size_label)
+
+            clear_cache_btn = QPushButton("立即清除缓存")
+            clear_cache_btn.setObjectName("smallBtn")
+            clear_cache_btn.clicked.connect(self._clear_cache_now)
+            cache_form.addRow("", clear_cache_btn)
+            sb.addWidget(self._wrap_form(cache_form))
 
             sb.addStretch(1)
 
-            # GEE auth
+            # GEE auth button — ghost style, subtle
             gee_btn = QPushButton("GEE 认证设置…")
             gee_btn.setObjectName("geeBtn")
             gee_btn.clicked.connect(self._open_gee_dialog)
             sb.addWidget(gee_btn)
             sb.addSpacing(8)
 
-            # Run button
+            # Primary action
             self._run_btn = QPushButton("开始制图")
             self._run_btn.setObjectName("runButton")
             self._run_btn.clicked.connect(self._on_run_cancel)
             sb.addWidget(self._run_btn)
 
-            root.addWidget(sidebar)
+            sidebar_scroll = QScrollArea()
+            sidebar_scroll.setFixedWidth(292)
+            sidebar_scroll.setWidget(sidebar_content)
+            sidebar_scroll.setWidgetResizable(True)
+            sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            sidebar_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            sidebar_scroll.setStyleSheet(
+                "QScrollArea { border: none; background: transparent; }"
+            )
+            root.addWidget(sidebar_scroll)
 
             # ── RIGHT CONTENT AREA ──────────────────────────────────────────────
             content = QWidget()
             content.setObjectName("content")
-            content.setStyleSheet("QWidget#content { background: #f0f0f0; }")
+            content.setStyleSheet("QWidget#content { background: #F8FAFC; }")
             cv = QVBoxLayout(content)
             cv.setContentsMargins(16, 14, 16, 14)
             cv.setSpacing(10)
@@ -497,11 +529,11 @@ if _QT_AVAILABLE:
             self._progress = QProgressBar()
             self._progress.setRange(0, 100)
             self._progress.setValue(0)
-            self._progress.setMaximumHeight(4)
+            self._progress.setMaximumHeight(3)
             prog_row.addWidget(self._progress, 1)
             self._progress_label = QLabel("就绪")
             self._progress_label.setStyleSheet(
-                "color: #999999; font-size: 11px; min-width: 0;"
+                "color: #94A3B8; font-size: 11px; min-width: 0;"
             )
             self._progress_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             prog_row.addWidget(self._progress_label)
@@ -525,7 +557,7 @@ if _QT_AVAILABLE:
             self._preview_label = QLabel("制作完成后，地图将在此处显示")
             self._preview_label.setAlignment(Qt.AlignCenter)
             self._preview_label.setStyleSheet(
-                "color: #d0d0d0; font-size: 14px; background: transparent;"
+                "color: #CBD5E1; font-size: 14px; background: transparent;"
             )
             self._preview_label.setSizePolicy(
                 QSizePolicy.Expanding, QSizePolicy.Expanding
@@ -539,7 +571,7 @@ if _QT_AVAILABLE:
             log_header_row.setContentsMargins(2, 0, 0, 0)
             log_hdr = QLabel("运行日志")
             log_hdr.setStyleSheet(
-                "color: #aaaaaa; font-size: 10px; font-weight: 700; letter-spacing: 0.8px;"
+                "color: #94A3B8; font-size: 10px; font-weight: 600; letter-spacing: 0.8px;"
             )
             log_header_row.addWidget(log_hdr)
             log_header_row.addStretch()
@@ -572,10 +604,8 @@ if _QT_AVAILABLE:
             for label, key, _mod, _cls in _ENGINES:
                 self._engine_combo.addItem(f"{label} (检测中…)", userData=key)
 
-            # Default to Cartopy (index 1) while probing
             self._engine_combo.setCurrentIndex(1)
 
-            # Probe each engine in a daemon thread; update the combo on completion
             def _probe():
                 results = []
                 for label, key, mod_name, cls_name in _ENGINES:
@@ -598,12 +628,12 @@ if _QT_AVAILABLE:
 
             def _on_done(results):
                 self._engine_combo.clear()
-                preferred_idx = 1  # default to Cartopy
+                preferred_idx = 1
                 for i, (label, key, avail, ver) in enumerate(results):
                     display = label if avail else f"{label} (不可用)"
                     self._engine_combo.addItem(display, userData=key)
                     if not avail:
-                        self._engine_combo.model().item(i).setForeground(QColor("#bbbbbb"))
+                        self._engine_combo.model().item(i).setForeground(QColor("#CBD5E1"))
                         self.append_log(f"[引擎] {label} 不可用: {ver}")
                     else:
                         self.append_log(f"[引擎] {label} 可用: {ver}")
@@ -649,13 +679,28 @@ if _QT_AVAILABLE:
                 self._custom_name = dlg.custom_name
                 name = str(dlg.shp_path.name) if dlg.shp_path else "未选择"
                 self._shp_label.setText(name)
-                self._shp_label.setStyleSheet("color: #1e1e1e; font-size: 11px;")
+                self._shp_label.setStyleSheet("color: #0F172A; font-size: 11px;")
+                self._shp_clear_btn.setVisible(True)
+                self._province_combo.setEnabled(False)
+                self._city_combo.setEnabled(False)
+
+        def _clear_shp(self) -> None:
+            self._custom_shp = None
+            self._custom_name = ""
+            self._shp_label.setText("未选择")
+            self._shp_label.setStyleSheet("color: #94A3B8; font-size: 11px;")
+            self._shp_clear_btn.setVisible(False)
+            self._province_combo.setEnabled(True)
+            self._city_combo.setEnabled(True)
 
         def _open_gee_dialog(self) -> None:
             from src.gui.gee_auth_dialog import GEEAuthDialog
             dlg = GEEAuthDialog(self)
             dlg.set_fetcher(self._pipeline.gee_fetcher)
             dlg.exec_()
+            pid = self._pipeline.gee_fetcher._project_id
+            if pid:
+                self._cfg.set("gee_project_id", pid)
 
         def _on_run_cancel(self) -> None:
             if self._worker and getattr(self._worker, "isRunning", lambda: False)():
@@ -687,7 +732,8 @@ if _QT_AVAILABLE:
             }
             data_type = data_map.get(self._data_type_combo.currentText(), "none")
 
-            safe_name = city_name.replace("/", "_").replace("\\", "_")
+            area_name = self._custom_name or city_name
+            safe_name = area_name.replace("/", "_").replace("\\", "_")
             output_path = Path(out_dir) / f"{safe_name}_区位图.{fmt}"
 
             gpkg = _DATA_DIR / "china_admin.gpkg"
@@ -727,7 +773,10 @@ if _QT_AVAILABLE:
             self._progress.setValue(0)
             self._preview_label.setText("正在制作，请稍候…")
             self._preview_label.setPixmap(QPixmap())
-            self.append_log(f"开始制作: {city_name} ({engine_key})")
+            label = f"{area_name} (SHP)" if self._custom_shp else city_name
+            self.append_log(f"开始制作: {label} ({engine_key})")
+            if self._custom_shp:
+                self.append_log(f"自定义 SHP: {self._custom_shp.name}  标题名称: {self._custom_name or '(SHP文件名)'}")
             self._worker.start()
 
         # ── Worker callbacks ──────────────────────────────────────────────────
@@ -756,7 +805,6 @@ if _QT_AVAILABLE:
             QMessageBox.critical(self, "制图失败", error_msg)
 
         def _show_preview(self, path: str) -> None:
-            """Load and display the output image in the preview label."""
             pix = QPixmap(path)
             if pix.isNull():
                 self._preview_label.setText(f"无法预览: {path}")
@@ -769,6 +817,35 @@ if _QT_AVAILABLE:
             self._preview_label.setPixmap(pix_scaled)
             self._preview_label.setToolTip(path)
             self._last_output = path
+
+        # ── Cache helpers ──────────────────────────────────────────────────────
+
+        def _get_cache_size_str(self) -> str:
+            try:
+                size = self._pipeline.cache_mgr.get_cache_size()
+                if size < 1024 ** 2:
+                    return f"{size / 1024:.1f} KB"
+                return f"{size / 1024 ** 2:.1f} MB"
+            except Exception:
+                return "—"
+
+        def _pick_cache_dir(self) -> None:
+            d = QFileDialog.getExistingDirectory(self, "选择缓存目录", self._cache_dir_edit.text())
+            if d:
+                self._cache_dir_edit.setText(d)
+                self._cfg.set("cache_dir", d)
+                self._pipeline.cache_mgr._root = Path(d)
+                self._pipeline.cache_mgr._root.mkdir(parents=True, exist_ok=True)
+                self._cache_size_label.setText(self._get_cache_size_str())
+
+        def _clear_cache_now(self) -> None:
+            self._pipeline.cache_mgr.clear_cache()
+            self._cache_size_label.setText(self._get_cache_size_str())
+            self.append_log("缓存已清除")
+
+        def closeEvent(self, event) -> None:
+            self._pipeline.cache_mgr.clear_cache()
+            event.accept()
 
 else:
     class MainWindow:  # type: ignore[no-redef]

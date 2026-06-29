@@ -45,6 +45,39 @@ def _setup_bundled_dlls() -> None:
 _setup_bundled_dlls()
 
 
+def _apply_system_proxy() -> None:
+    """Propagate Windows system proxy to env vars AND patch aiohttp.
+
+    geedim creates aiohttp.ClientSession without trust_env=True, so it ignores
+    HTTP_PROXY / HTTPS_PROXY entirely.  We patch ClientSession.__init__ to
+    default trust_env=True so the env vars we set are actually honoured.
+    """
+    import urllib.request
+    proxies = urllib.request.getproxies()
+    for scheme in ("http", "https"):
+        for key in (scheme + "_proxy", (scheme + "_proxy").upper()):
+            if key not in os.environ:
+                proxy_url = proxies.get(scheme)
+                if proxy_url:
+                    os.environ[key] = proxy_url
+
+    # Patch aiohttp so every ClientSession respects the proxy env vars above.
+    try:
+        import aiohttp
+        _orig_init = aiohttp.ClientSession.__init__
+
+        def _patched_init(self, *args, **kwargs):
+            kwargs.setdefault("trust_env", True)
+            _orig_init(self, *args, **kwargs)
+
+        aiohttp.ClientSession.__init__ = _patched_init  # type: ignore[method-assign]
+    except Exception:
+        pass
+
+
+_apply_system_proxy()
+
+
 def main() -> None:
     try:
         from PyQt5.QtWidgets import QApplication

@@ -47,7 +47,11 @@ if _QT_AVAILABLE:
                 if not self._cancelled:
                     self.finished.emit(str(output))
             except Exception as exc:
-                self.error.emit(str(exc))
+                detail = getattr(exc, "detail", "")
+                msg = str(exc)
+                if detail and detail not in msg:
+                    msg = f"{msg}\n详情: {detail}"
+                self.error.emit(msg)
 
         def _on_progress(self, pct: int, msg: str) -> None:
             if not self._cancelled:

@@ -48,11 +48,14 @@ class GEEFetcher:
     # ── Auth ───────────────────────────────────────────────────────────────────
 
     def authenticate(self) -> bool:
-        """Step 1: OAuth browser flow only — saves credentials, no project needed."""
+        """Step 1: OAuth browser flow — always forces a fresh browser login."""
         if not _EE_AVAILABLE:
             raise GEEAuthFailedError("earthengine-api 未安装")
         try:
-            ee.Authenticate()
+            # force=True: skip "valid credentials" cache so the browser always opens.
+            # auth_mode='localhost': use Python's local redirect server, avoids gcloud
+            # dependency and works reliably in a desktop GUI.
+            ee.Authenticate(auth_mode="localhost", force=True)
             return True
         except Exception as exc:
             raise GEEAuthFailedError(str(exc)) from exc
@@ -68,53 +71,6 @@ class GEEFetcher:
             return True
         except Exception as exc:
             raise GEEAuthFailedError(str(exc)) from exc
-
-    def list_projects(self) -> list[str]:
-        """Return Cloud project IDs accessible to the authenticated user.
-
-        Uses the saved OAuth credentials (written by ee.Authenticate()) to call
-        the Cloud Resource Manager API via urllib — no extra packages needed.
-        """
-        import json
-        import urllib.request
-        import urllib.error
-
-        creds_path = Path.home() / ".config" / "earthengine" / "credentials"
-        if not creds_path.exists():
-            raise GEEAuthFailedError("尚未登录，请先完成 Google 账号授权")
-
-        with creds_path.open(encoding="utf-8") as f:
-            creds = json.load(f)
-
-        # Refresh the access token using google-auth (installed with earthengine-api)
-        try:
-            import google.oauth2.credentials
-            import google.auth.transport.requests
-
-            gc = google.oauth2.credentials.Credentials(
-                token=creds.get("access_token"),
-                refresh_token=creds.get("refresh_token"),
-                client_id=creds.get("client_id"),
-                client_secret=creds.get("client_secret"),
-                token_uri="https://oauth2.googleapis.com/token",
-            )
-            gc.refresh(google.auth.transport.requests.Request())
-            token = gc.token
-        except Exception:
-            # Fallback: use stored token directly (may be expired)
-            token = creds.get("access_token", "")
-
-        url = "https://cloudresourcemanager.googleapis.com/v1/projects?filter=lifecycleState:ACTIVE"
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read())
-        except urllib.error.HTTPError as exc:
-            raise GEEAuthFailedError(f"无法获取项目列表 (HTTP {exc.code})，请检查网络或重新登录") from exc
-        except Exception as exc:
-            raise GEEAuthFailedError(f"获取项目列表失败: {exc}") from exc
-
-        return [p["projectId"] for p in data.get("projects", [])]
 
     def is_authenticated(self) -> bool:
         if self._authenticated:
@@ -328,7 +284,6 @@ class GEEFetcher:
                     scale=scale,
                     crs="EPSG:4326",
                     overwrite=True,
-                    timeout=DOWNLOAD_TIMEOUT,
                 )
                 return
             except Exception as exc:
@@ -336,8 +291,11 @@ class GEEFetcher:
                 err_str = str(exc).lower()
                 if "quota" in err_str or "resource exhausted" in err_str:
                     raise GEEQuotaExceededError(str(exc)) from exc
-                wait = 2 ** attempt
-                time.sleep(wait)
+                # Don't retry if it's a clear auth/project error
+                if any(k in err_str for k in ("not enabled", "permission denied", "unauthenticated", "forbidden")):
+                    break
+                if attempt < DOWNLOAD_MAX_RETRIES - 1:
+                    time.sleep(2 ** attempt)
 
         raise GEEDownloadFailedError(str(last_exc)) from last_exc
 

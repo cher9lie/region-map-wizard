@@ -176,86 +176,236 @@ class DataProcessor:
 
 ---
 
-## 任务 4: QGIS 渲染引擎
+## 任务 4: QGIS 渲染引擎（subprocess 架构，与 ArcGIS 一致）
 
 ```
-阅读 docs/SPEC.md 第 4 节（全部），然后:
+架构说明：
+与 ArcGIS 引擎相同，QGIS 通过 subprocess 调用。
+QGIS 在 Windows 上拥有独立的 Python 环境（OSGeo4W 或独立安装），
+不能也不应该在主进程中 import qgis.core。
+入口脚本是 python-qgis.bat（相当于 propy.bat）。
 
-实现 src/renderers/qgis_renderer.py:
-
-这是项目最核心的模块。它要使用 PyQGIS 的 QgsLayout 系统
-生成一张包含三级区位图的高清地图。
+### 4.1 重写 src/renderers/qgis_renderer.py
 
 class QGISRenderer(BaseRenderer):
+
     def __init__(self):
-        self._qgs = None  # QgsApplication 实例
-    
-    def _init_qgis(self):
-        """初始化 PyQGIS (独立模式，无 GUI)
-        自动检测 QGIS 安装路径
-        """
-    
+        self._python_qgis_path: Optional[Path] = None
+        self._qgis_version: Optional[str] = None
+        self._last_project_path: Optional[Path] = None  # 保存的 .qgz 路径
+
     def check_available(self) -> tuple[bool, str]:
-        """检查 QGIS 是否可用"""
-    
+        """检测 QGIS 是否可用
+
+        检测顺序:
+        1. 缓存 self._python_qgis_path
+        2. 环境变量 QGIS_INSTALL_PATH → {path}/bin/python-qgis.bat
+        3. Windows 注册表:
+             HKLM\SOFTWARE\QGIS\QGIS3   → InstallPath
+             HKLM\SOFTWARE\QGIS\QGIS3-LTR → InstallPath
+           （QGIS 独立安装版写注册表，OSGeo4W 版不写）
+        4. 常见路径（遍历版本号）:
+             C:\Program Files\QGIS 3.{40,38,36,34,32}\bin\python-qgis.bat
+             C:\Program Files\QGIS 3.{40,38,36,34,32}\bin\python-qgis-ltr.bat
+             C:\OSGeo4W\bin\python-qgis.bat
+             C:\OSGeo4W64\bin\python-qgis.bat
+        5. 找到后验证:
+             python-qgis.bat -c "from qgis.core import Qgis; print(Qgis.version())"
+        6. 返回 (True, "QGIS {version}") 或 (False, "未找到 QGIS 安装")
+        """
+
+    def _find_python_qgis(self) -> Optional[Path]:
+        """查找 python-qgis.bat，按上述顺序"""
+
     def render(self, config: RenderConfig, progress_callback=None) -> Path:
-        """完整渲染流程:
-        1. 初始化 QGIS
-        2. 创建 QgsProject
-        3. 加载矢量图层 (国界、省界、市界)
-        4. 加载栅格图层 (DEM/影像)
-        5. 设置符号化
-        6. 创建 QgsPrintLayout (A4 横版)
-        7. 添加三个 QgsLayoutItemMap (中国、省、市)
-        8. 添加标题、经纬网、比例尺、指北针、图例
-        9. 导出
-        """
-    
-    def _setup_vector_layers(self, project, config):
-        """加载并符号化矢量图层"""
-    
-    def _setup_raster_layer(self, project, config):
-        """加载并符号化栅格图层
-        DEM: QgsRasterShader + QgsColorRampShader 分层设色
-        Hillshade: 灰度渲染
-        Sentinel-2: RGB 真彩色
-        """
-    
-    def _create_layout(self, project, config) -> QgsPrintLayout:
-        """创建排版布局，按 SPEC 第 4.2 节的精确尺寸:
-        - 页面: 297×210mm
-        - (a) 中国全图: 左上 90×78mm, Lambert Conformal Conic
-        - (b) 省级图: 左下 90×62mm
-        - (c) 研究区详图: 右侧 182×155mm
-        - 标题栏: 顶部右侧 12mm 高
-        - 底部信息栏: 8mm 高
-        """
-    
-    def _add_map_decorations(self, layout, map_item, config):
-        """添加经纬网、比例尺、指北针、图例"""
-    
-    def _add_connection_lines(self, layout, config):
-        """添加从全国图指向省图、省图指向市图的连接线框"""
-    
-    def _export(self, layout, config) -> Path:
-        """使用 QgsLayoutExporter 导出"""
+        """通过 subprocess 调用 _qgis_worker.py
 
-关键实现注意:
-- QgsLayoutItemMap.setExtent() 设置每个面板的显示范围
-- QgsLayoutItemMapGrid 添加经纬网
-- QgsLayoutItemScaleBar 添加比例尺
-- QgsLayoutItemPicture 添加指北针 SVG
-- QgsLayoutItemLabel 添加标题文本
-- QgsLayoutItemLegend 添加图例
-- 中国全图需要用 Lambert Conformal Conic 投影 (EPSG:4488 或自定义)
-- 省和市面板可以用 PlateCarree
-- 研究区高亮: 给目标省份/城市加红色填充半透明 + 红色边框
-- 字体: 优先使用 SimHei/SimSun，fallback 到 Arial
-- 输出 DPI: 从 config.dpi 读取
+        流程（与 ArcGIS 完全一致）:
+        1. check_available() → 不可用则 raise RendererNotAvailableError
+        2. 将 config 序列化为 JSON 临时文件（Path → str）
+        3. subprocess.Popen(
+               [str(python_qgis_bat), str(_WORKER_SCRIPT), '--config', config_json],
+               stdout=subprocess.PIPE, stderr=subprocess.PIPE
+           )  ← 不传 text=True，读 bytes，decode utf-8 errors=replace
+        4. 逐行解析 stdout JSON:
+             {"step": "loading",  "progress": 10, "message": "..."}
+             {"step": "data",     "progress": 30, "message": "..."}
+             {"step": "render",   "progress": 60, "message": "..."}
+             {"step": "export",   "progress": 90, "message": "..."}
+             {"step": "done",     "progress": 100, "output": "...", "project": "..."}
+             {"step": "error",    "message": "..."}
+        5. returncode 非零则读 stderr 报错
+        """
 
-由于 PyQGIS 环境可能不可用 (在没有 QGIS 的机器上开发),
-先写完整代码结构，所有 PyQGIS 调用封装在 try-except 中，
-缺少 QGIS 时 check_available() 返回 False。
+    def get_project_path(self) -> Optional[Path]:
+        """返回 worker 保存的 .qgz 项目文件路径"""
+
+
+### 4.2 实现 src/renderers/_qgis_worker.py
+
+这个脚本在 QGIS 的 Python 环境中独立运行，不导入主项目任何模块。
+与主进程通过 stdout JSON 行协议通信（同 _arcgis_worker.py）。
+
+关键实现细节：
+
+0. 开头强制 stdout UTF-8（同 _arcgis_worker.py）:
+   sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
+
+1. QgsApplication 独立模式初始化（python-qgis.bat 已设置好所有环境变量）:
+   from qgis.core import QgsApplication
+   qgs = QgsApplication([], False)
+   qgs.initQgis()
+   # ... do work ...
+   qgs.exitQgis()
+
+2. 布局创建（QgsPrintLayout，A4 横版，SPEC §4.2 精确尺寸）:
+   from qgis.core import (
+       QgsProject, QgsPrintLayout, QgsLayoutItemMap,
+       QgsLayoutSize, QgsLayoutPoint, QgsUnitTypes,
+       QgsRectangle, QgsCoordinateReferenceSystem
+   )
+   project = QgsProject.instance()
+   layout = QgsPrintLayout(project)
+   layout.initializeDefaults()
+   page = layout.pageCollection().pages()[0]
+   page.setPageSize(QgsLayoutSize(297, 210, QgsUnitTypes.LayoutMillimeters))
+
+3. 三个地图框（位置与 ArcGIS worker 一致）:
+   map_china    → 90×78mm, 左上 (5, 5), LCC 投影
+   map_province → 90×62mm, 左下 (5, 88)
+   map_detail   → 182×155mm, 右侧 (100, 22)
+
+   map_china    投影: QgsCoordinateReferenceSystem(
+       '+proj=lcc +lat_1=25 +lat_2=47 +lat_0=35 +lon_0=105 +datum=WGS84'
+   )
+   map_province 投影: EPSG:4326
+   map_detail   投影: EPSG:4326（或按经度自动选 UTM）
+
+4. 图层加载:
+   country_layer  = QgsVectorLayer(country_boundary, "country", "ogr")
+   province_layer = QgsVectorLayer(province_boundary, "province", "ogr")
+   city_layer     = QgsVectorLayer(city_boundary, "city", "ogr")
+   project.addMapLayer(country_layer, False)
+   ...
+   每个地图框通过 setLayers([...]) 分配不同图层
+
+5. 图层符号化:
+   矢量高亮：
+     symbol = QgsFillSymbol.createSimple({
+         'color': 'rgba(255,0,0,50)',
+         'outline_color': '#ff0000',
+         'outline_width': '1.5'
+     })
+     layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+
+   DEM 分层设色:
+     shader_fn = QgsColorRampShader()
+     shader_fn.setColorRampType(QgsColorRampShader.Interpolated)
+     # 加载 color_ramps.json 中的色带 stops
+     shader = QgsRasterShader()
+     shader.setRasterShaderFunction(shader_fn)
+     renderer = QgsSingleBandPseudoColorRenderer(layer.dataProvider(), 1, shader)
+     layer.setRenderer(renderer)
+
+   Hillshade 灰度:
+     renderer = QgsSingleBandGrayRenderer(layer.dataProvider(), 1)
+     layer.setRenderer(renderer)
+
+   Sentinel-2 RGB:
+     renderer = QgsMultiBandColorRenderer(layer.dataProvider(), 1, 2, 3)
+     layer.setRenderer(renderer)
+
+6. 地图框设置各自图层:
+   map_china.setLayers([country_layer, province_highlight_layer])
+   map_province.setLayers([province_layer, city_highlight_layer])
+   map_detail.setLayers([raster_layer, city_layer])
+
+7. 设置显示范围（从图层 extent 自动计算）:
+   china_ext = QgsRectangle(-2800000, -1500000, 2800000, 2500000)  # LCC 坐标
+   map_china.zoomToExtent(china_ext)
+   province_ext = province_layer.extent()
+   province_ext.grow(province_ext.width() * 0.1)
+   map_province.zoomToExtent(province_ext)
+   city_ext = city_layer.extent()
+   city_ext.grow(city_ext.width() * 0.15)
+   map_detail.zoomToExtent(city_ext)
+
+8. 装饰元素:
+   经纬网（detail 面板）:
+     grid = QgsLayoutItemMapGrid('graticule', map_detail)
+     grid.setIntervalX(interval)  # 自动计算 0.1°~10°
+     grid.setIntervalY(interval)
+     grid.setAnnotationEnabled(True)
+     map_detail.grids().addGrid(grid)
+
+   比例尺:
+     scalebar = QgsLayoutItemScaleBar(layout)
+     scalebar.setLinkedMap(map_detail)
+     scalebar.setUnits(QgsUnitTypes.DistanceKilometers)
+     scalebar.setStyle('Single Box')
+     scalebar.attemptMove(QgsLayoutPoint(102, 165, QgsUnitTypes.LayoutMillimeters))
+
+   指北针（SVG 图片）:
+     pic = QgsLayoutItemPicture(layout)
+     pic.setNorthMode(QgsLayoutItemPicture.GridNorth)  # 绑定到 map_detail
+     pic.setLinkedMap(map_detail)
+     pic.attemptMove(QgsLayoutPoint(268, 26, QgsUnitTypes.LayoutMillimeters))
+
+   标题文字:
+     label = QgsLayoutItemLabel(layout)
+     label.setText(title_text)
+     label.setFont(QFont('SimHei', 16, QFont.Bold))
+
+9. 保存 .qgz 工程（供用户二次编辑）:
+   stem = f"{province_name}_{city_name}_区位图"
+   project.setFileName(str(Path(output_dir) / f'{stem}.qgz'))
+   project.write()
+
+10. 导出:
+    exporter = QgsLayoutExporter(layout)
+    if fmt in ('jpg', 'jpeg'):
+        settings = QgsLayoutExporter.ImageExportSettings()
+        settings.dpi = dpi
+        exporter.exportToImage(output_path, settings)
+    elif fmt == 'pdf':
+        settings = QgsLayoutExporter.PdfExportSettings()
+        settings.dpi = dpi
+        exporter.exportToPdf(output_path, settings)
+    ...
+
+11. 输出 done JSON:
+    _report('done', 100, '完成', output=output_path, project=project_path)
+
+12. qgs.exitQgis() 释放资源
+
+
+### 4.3 编写测试 tests/test_qgis_renderer.py
+
+全部 mock，不依赖 QGIS 安装：
+
+- test_check_available_no_qgis:
+    mock _find_python_qgis 返回 None
+    断言返回 (False, ...) 且 reason 含 "未找到"
+
+- test_check_available_with_qgis:
+    mock subprocess.run stdout=b"3.40.0\n" returncode=0
+    断言返回 (True, "QGIS 3.40.0")
+
+- test_render_calls_popen_with_python_qgis_and_worker:
+    mock Popen, stdout 输出 done JSON bytes
+    断言 Popen 第一个参数是 [str(python_qgis_bat), str(worker_script), '--config', ...]
+
+- test_render_parses_progress_callbacks:
+    mock stdout 输出 loading/data/render/export/done 5 行 JSON bytes
+    断言 progress_callback 被调用正确次数，pct 序列正确
+
+- test_render_raises_on_error_step:
+    mock stdout 输出 {"step":"error","message":"qgis 崩溃"}
+    断言 raise RenderFailedError 且消息含 "qgis 崩溃"
+
+- test_render_unavailable_raises:
+    mock check_available 返回 (False, ...)
+    断言 raise RendererNotAvailableError
 ```
 
 ---

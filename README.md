@@ -84,7 +84,7 @@ pyinstaller --clean --noconfirm rmw.spec
 - [x] **ArcGIS Pro 渲染引擎**（架构实现完成，待 ArcGIS Pro 环境联调）
   - [x] 注册表自动检测 + propy.bat 环境发现
   - [x] subprocess 进程隔离（主进程不 import arcpy）
-  - [x] JSON 行协议进度通信
+  - [x] JSON 行协议进度通信（stdout UTF-8 强制编码，解决 GBK 乱码）
   - [x] 三图框布局（模板法优先 + 全代码 fallback）
   - [x] 符号化：DEM 分层设色 / 山体阴影灰度 / Sentinel-2 RGB
   - [x] CIM Access 经纬网间距设置
@@ -100,11 +100,14 @@ pyinstaller --clean --noconfirm rmw.spec
 - [ ] 图名、颜色、字体等样式参数开放给用户配置
 - [ ] 支持手动调整三个面板的经纬度范围
 
-#### 中期 — QGIS 适配
+#### 中期 — QGIS 适配（架构实现完成，待实机联调）
 
-- [ ] 基于 **PyQGIS** 实现 `QGISRenderer`，利用 QgsLayoutItemMap + QgsLayoutExporter 输出
-- [ ] 在 QGIS 安装环境中自动探测 OSGeo4W 路径并初始化 `QgsApplication`
-- [ ] 支持 QGIS 符号库中的地图样式（色带、线型等）
+- [x] `QGISRenderer`：与 ArcGIS 相同的 subprocess 架构（`python-qgis.bat` → `_qgis_worker.py`），彻底解决 Windows 环境隔离问题
+- [x] `_qgis_worker.py`：QgsApplication 独立模式 + QgsPrintLayout 三图框 + QgsLayoutExporter
+- [x] 注册表 + 常见路径自动检测 `python-qgis.bat`（OSGeo4W / 独立安装版，QGIS 3.28–3.40）
+- [x] JSON 行协议进度通信（stdout UTF-8 强制编码，解决 GBK 乱码）
+- [x] mock 测试，不依赖 QGIS 安装（9 个测试全部通过）
+- [ ] QGIS 实机测试与细节调整
 - [ ] 提供 QGIS 插件形式的分发包（`.zip` 插件格式）
 
 #### 中期 — ArcGIS Pro 适配（框架已就绪，待实机联调）

@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -121,6 +122,16 @@ class ArcGISRenderer(BaseRenderer):
                 # that would crash a utf-8 text reader.
             )
 
+            # Drain stderr in a background thread to prevent pipe-buffer deadlock.
+            # If stderr fills its OS pipe buffer (65 KB on Windows) while we are
+            # reading stdout, the worker blocks on stderr and we block on stdout.
+            stderr_chunks: list[bytes] = []
+            def _drain_stderr() -> None:
+                for chunk in process.stderr:  # type: ignore[union-attr]
+                    stderr_chunks.append(chunk)
+            _stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+            _stderr_thread.start()
+
             output_path: Optional[str] = None
             for raw_bytes in process.stdout:  # type: ignore[union-attr]
                 # Decode as UTF-8 (worker JSON lines) and tolerate GBK bytes
@@ -148,10 +159,10 @@ class ArcGISRenderer(BaseRenderer):
                     break
                 _p(pct, text)
 
+            _stderr_thread.join(timeout=5)
             process.wait(timeout=300)
             if process.returncode != 0:
-                stderr_bytes = process.stderr.read() if process.stderr else b""
-                stderr = stderr_bytes.decode("utf-8", errors="replace")[:300]
+                stderr = b"".join(stderr_chunks).decode("utf-8", errors="replace")[:300]
                 raise RenderFailedError(
                     f"ArcGIS 渲染进程退出码 {process.returncode}: {stderr}"
                 )

@@ -83,7 +83,7 @@ class GEEFetcher:
         if not creds_path.exists():
             raise GEEAuthFailedError("尚未登录，请先完成 Google 账号授权")
 
-        with creds_path.open() as f:
+        with creds_path.open(encoding="utf-8") as f:
             creds = json.load(f)
 
         # Refresh the access token using google-auth (installed with earthengine-api)

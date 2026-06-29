@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -125,6 +126,14 @@ class QGISRenderer(BaseRenderer):
                 stderr=subprocess.PIPE,
             )
 
+            # Drain stderr in a background thread to prevent pipe-buffer deadlock.
+            stderr_chunks: list[bytes] = []
+            def _drain_stderr() -> None:
+                for chunk in process.stderr:  # type: ignore[union-attr]
+                    stderr_chunks.append(chunk)
+            _stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+            _stderr_thread.start()
+
             output_path: Optional[str] = None
             for raw_bytes in process.stdout:  # type: ignore[union-attr]
                 raw = raw_bytes.decode("utf-8", errors="replace").strip()
@@ -150,10 +159,10 @@ class QGISRenderer(BaseRenderer):
                     break
                 _p(pct, text)
 
+            _stderr_thread.join(timeout=5)
             process.wait(timeout=600)
             if process.returncode != 0:
-                stderr_bytes = process.stderr.read() if process.stderr else b""
-                stderr = stderr_bytes.decode("utf-8", errors="replace")[:300]
+                stderr = b"".join(stderr_chunks).decode("utf-8", errors="replace")[:300]
                 raise RenderFailedError(
                     f"QGIS 渲染进程退出码 {process.returncode}: {stderr}"
                 )

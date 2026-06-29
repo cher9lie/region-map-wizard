@@ -6,7 +6,7 @@ try:
     from PyQt5.QtWidgets import (
         QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
         QLabel, QComboBox, QPushButton, QFrame,
-        QSizePolicy,
+        QSizePolicy, QWidget,
     )
     from PyQt5.QtCore import Qt, QThread, pyqtSignal
     from PyQt5.QtGui import QFont
@@ -19,7 +19,7 @@ if _QT_AVAILABLE:
     # ── Background workers ────────────────────────────────────────────────────
 
     class _LoginWorker(QThread):
-        done = pyqtSignal(bool, str)  # success, message
+        done = pyqtSignal(bool, str)
 
         def __init__(self, fetcher):
             super().__init__()
@@ -33,7 +33,7 @@ if _QT_AVAILABLE:
                 self.done.emit(False, str(exc))
 
     class _ListProjectsWorker(QThread):
-        done = pyqtSignal(bool, list, str)  # success, projects, message
+        done = pyqtSignal(bool, list, str)
 
         def __init__(self, fetcher):
             super().__init__()
@@ -69,7 +69,8 @@ if _QT_AVAILABLE:
         def __init__(self, parent=None):
             super().__init__(parent)
             self.setWindowTitle("Google Earth Engine 认证")
-            self.setMinimumWidth(460)
+            self.setMinimumWidth(480)
+            self.setModal(True)
             self._fetcher = None
             self._worker = None
             self._build_ui()
@@ -82,87 +83,135 @@ if _QT_AVAILABLE:
 
         def _build_ui(self) -> None:
             layout = QVBoxLayout(self)
-            layout.setSpacing(10)
+            layout.setContentsMargins(20, 20, 20, 16)
+            layout.setSpacing(12)
 
-            # ── Step 1 ────────────────────────────────────────────────────────
-            step1_box = QFrame()
-            step1_box.setFrameShape(QFrame.StyledPanel)
-            step1_box.setStyleSheet(
-                "QFrame { border: 1px solid #CCCCCC; border-radius: 5px; "
-                "background: #FAFAFA; padding: 4px; }"
+            # Dialog title
+            dlg_title = QLabel("Google Earth Engine 认证")
+            dlg_title.setStyleSheet(
+                "font-size: 15px; font-weight: 700; color: #1e1e1e; margin-bottom: 4px;"
             )
-            s1 = QVBoxLayout(step1_box)
+            layout.addWidget(dlg_title)
+
+            # ── Step 1 card ────────────────────────────────────────────────────
+            step1_card = QFrame()
+            step1_card.setStyleSheet(
+                "QFrame { border: 1px solid #e8e8e8; border-radius: 8px;"
+                " background: #fafafa; padding: 0; }"
+            )
+            s1 = QVBoxLayout(step1_card)
+            s1.setContentsMargins(14, 12, 14, 12)
+            s1.setSpacing(8)
 
             s1_header = QHBoxLayout()
-            step1_title = QLabel("第一步：登录 Google 账号")
-            step1_title.setFont(QFont("", -1, QFont.Bold))
+            step1_badge = QLabel("01")
+            step1_badge.setStyleSheet(
+                "background: #0067c0; color: white; font-size: 10px; font-weight: 700;"
+                " border-radius: 10px; padding: 2px 7px; min-width: 0;"
+            )
+            step1_badge.setFixedSize(28, 20)
+            step1_badge.setAlignment(Qt.AlignCenter)
+            step1_title = QLabel("登录 Google 账号")
+            step1_title.setStyleSheet("font-size: 13px; font-weight: 600; color: #1e1e1e; border: none; background: transparent;")
+            s1_header.addWidget(step1_badge)
+            s1_header.addSpacing(8)
             s1_header.addWidget(step1_title)
             s1_header.addStretch()
             self._login_status = QLabel("")
-            self._login_status.setStyleSheet("color: #2E7D32; font-weight: bold;")
+            self._login_status.setStyleSheet(
+                "color: #107c10; font-size: 11px; font-weight: 600; border: none; background: transparent;"
+            )
             s1_header.addWidget(self._login_status)
             s1.addLayout(s1_header)
 
-            tip = QLabel("点击按钮会弹出浏览器，用 Google 账号授权即可，无需填写任何信息。")
+            tip = QLabel("点击按钮将在浏览器中打开 Google 授权页面，完成授权后返回此窗口。")
             tip.setWordWrap(True)
-            tip.setStyleSheet("color: #666; font-size: 11px;")
+            tip.setStyleSheet("color: #888888; font-size: 11px; border: none; background: transparent;")
             s1.addWidget(tip)
 
-            self._login_btn = QPushButton("打开浏览器登录")
-            self._login_btn.setFixedHeight(32)
+            self._login_btn = QPushButton("在浏览器中登录")
+            self._login_btn.setStyleSheet(
+                "QPushButton { min-height: 32px; font-size: 12px; }"
+            )
             self._login_btn.clicked.connect(self._start_login)
             s1.addWidget(self._login_btn)
 
-            layout.addWidget(step1_box)
+            layout.addWidget(step1_card)
 
-            # ── Step 2 ────────────────────────────────────────────────────────
-            self._step2_box = QFrame()
-            self._step2_box.setFrameShape(QFrame.StyledPanel)
-            self._step2_box.setStyleSheet(
-                "QFrame { border: 1px solid #CCCCCC; border-radius: 5px; "
-                "background: #FAFAFA; padding: 4px; }"
+            # ── Step 2 card ────────────────────────────────────────────────────
+            self._step2_card = QFrame()
+            self._step2_card.setStyleSheet(
+                "QFrame { border: 1px solid #e8e8e8; border-radius: 8px;"
+                " background: #fafafa; padding: 0; }"
             )
-            s2 = QVBoxLayout(self._step2_box)
+            s2 = QVBoxLayout(self._step2_card)
+            s2.setContentsMargins(14, 12, 14, 12)
+            s2.setSpacing(8)
 
-            step2_title = QLabel("第二步：选择 Cloud 项目")
-            step2_title.setFont(QFont("", -1, QFont.Bold))
-            s2.addWidget(step2_title)
+            s2_header = QHBoxLayout()
+            step2_badge = QLabel("02")
+            step2_badge.setStyleSheet(
+                "background: #0067c0; color: white; font-size: 10px; font-weight: 700;"
+                " border-radius: 10px; padding: 2px 7px; min-width: 0;"
+            )
+            step2_badge.setFixedSize(28, 20)
+            step2_badge.setAlignment(Qt.AlignCenter)
+            step2_title = QLabel("选择 Cloud 项目")
+            step2_title.setStyleSheet("font-size: 13px; font-weight: 600; color: #1e1e1e; border: none; background: transparent;")
+            s2_header.addWidget(step2_badge)
+            s2_header.addSpacing(8)
+            s2_header.addWidget(step2_title)
+            s2_header.addStretch()
+            s2.addLayout(s2_header)
 
             proj_row = QHBoxLayout()
             self._project_combo = QComboBox()
             self._project_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            self._project_combo.setPlaceholderText("（加载中…）")
+            self._project_combo.setPlaceholderText("加载中…")
             proj_row.addWidget(self._project_combo, stretch=1)
-
             self._refresh_btn = QPushButton("刷新")
-            self._refresh_btn.setFixedWidth(54)
+            self._refresh_btn.setFixedWidth(58)
             self._refresh_btn.clicked.connect(self._load_projects)
             proj_row.addWidget(self._refresh_btn)
             s2.addLayout(proj_row)
 
             self._proj_hint = QLabel("")
-            self._proj_hint.setStyleSheet("color: #666; font-size: 11px;")
+            self._proj_hint.setWordWrap(True)
+            self._proj_hint.setStyleSheet(
+                "color: #aaaaaa; font-size: 10px; border: none; background: transparent;"
+            )
             s2.addWidget(self._proj_hint)
 
-            layout.addWidget(self._step2_box)
-            self._step2_box.setVisible(False)
+            layout.addWidget(self._step2_card)
+            self._step2_card.setVisible(False)
 
-            # ── Status bar ────────────────────────────────────────────────────
+            # ── Status ─────────────────────────────────────────────────────────
             self._status_label = QLabel("")
             self._status_label.setWordWrap(True)
-            self._status_label.setStyleSheet("color: #555; font-size: 11px;")
+            self._status_label.setStyleSheet("color: #666666; font-size: 11px;")
             layout.addWidget(self._status_label)
 
-            # ── Buttons ───────────────────────────────────────────────────────
+            # ── Buttons ────────────────────────────────────────────────────────
+            sep = QWidget()
+            sep.setFixedHeight(1)
+            sep.setStyleSheet("background: #eeeeee;")
+            layout.addWidget(sep)
+
             btn_row = QHBoxLayout()
             btn_row.addStretch()
             self._confirm_btn = QPushButton("完成")
             self._confirm_btn.setEnabled(False)
-            self._confirm_btn.setFixedWidth(70)
+            self._confirm_btn.setFixedWidth(80)
+            self._confirm_btn.setStyleSheet(
+                "QPushButton { background: #0067c0; color: white; border: none;"
+                " border-radius: 5px; font-weight: 600; min-height: 30px; }"
+                "QPushButton:hover { background: #005aa8; }"
+                "QPushButton:disabled { background: #cccccc; color: #ffffff; }"
+            )
             self._confirm_btn.clicked.connect(self._confirm)
             btn_row.addWidget(self._confirm_btn)
             close_btn = QPushButton("关闭")
-            close_btn.setFixedWidth(70)
+            close_btn.setFixedWidth(80)
             close_btn.clicked.connect(self.reject)
             btn_row.addWidget(close_btn)
             layout.addLayout(btn_row)
@@ -170,7 +219,6 @@ if _QT_AVAILABLE:
         # ── Logic ─────────────────────────────────────────────────────────────
 
         def _check_existing_login(self) -> None:
-            """If credentials already exist, skip login and go to step 2."""
             if self._fetcher and self._fetcher.has_credentials():
                 self._mark_logged_in()
                 self._load_projects()
@@ -188,7 +236,7 @@ if _QT_AVAILABLE:
 
         def _on_login_done(self, success: bool, error: str) -> None:
             self._login_btn.setEnabled(True)
-            self._login_btn.setText("打开浏览器登录")
+            self._login_btn.setText("在浏览器中登录")
             if success:
                 self._mark_logged_in()
                 self._load_projects()
@@ -196,8 +244,8 @@ if _QT_AVAILABLE:
                 self._set_status(f"登录失败: {error}")
 
         def _mark_logged_in(self) -> None:
-            self._login_status.setText("✓ 已登录")
-            self._step2_box.setVisible(True)
+            self._login_status.setText("已登录")
+            self._step2_card.setVisible(True)
             self.adjustSize()
 
         def _load_projects(self) -> None:
@@ -209,7 +257,6 @@ if _QT_AVAILABLE:
             self._proj_hint.setText("")
             self._confirm_btn.setEnabled(False)
             self._set_status("正在获取项目列表…")
-
             self._worker = _ListProjectsWorker(self._fetcher)
             self._worker.done.connect(self._on_projects_loaded)
             self._worker.start()
@@ -221,7 +268,6 @@ if _QT_AVAILABLE:
                     self._project_combo.clear()
                     for pid in projects:
                         self._project_combo.addItem(pid)
-                    # Pre-select current project if known
                     cur = getattr(self._fetcher, "_project_id", "")
                     if cur:
                         idx = self._project_combo.findText(cur)
@@ -230,11 +276,11 @@ if _QT_AVAILABLE:
                     self._confirm_btn.setEnabled(True)
                     self._set_status(f"找到 {len(projects)} 个项目，请选择后点击完成。")
                     self._proj_hint.setText(
-                        "提示：如果没有项目，请先在 console.cloud.google.com 创建，并启用 Earth Engine API。"
+                        "如未找到项目，请先在 console.cloud.google.com 创建并启用 Earth Engine API。"
                     )
                 else:
                     self._project_combo.setPlaceholderText("（未找到项目）")
-                    self._set_status("未找到可用项目，请检查 GEE 权限或先在 Cloud Console 创建项目。")
+                    self._set_status("未找到可用项目，请检查 GEE 权限。")
             else:
                 self._project_combo.setPlaceholderText("（加载失败）")
                 self._set_status(f"获取项目列表失败: {error}")
@@ -254,7 +300,7 @@ if _QT_AVAILABLE:
             self._confirm_btn.setEnabled(True)
             if success:
                 self._set_status(f"认证成功！当前项目: {self._project_combo.currentText()}")
-                self._login_status.setText("✓ 已登录并初始化")
+                self._login_status.setText("已登录并初始化")
             else:
                 self._set_status(f"初始化失败: {error}")
 
